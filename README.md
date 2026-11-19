@@ -102,7 +102,7 @@ Anything starting with `TODO(harshitha)` shows up on the page with a yellow dash
 ## Deploying (GitHub + Vercel)
 1. **Create the repo**: on github.com (signed in as U-Harshitha) go to *New repository*, name it `portfolio`, leave it **empty** (no README, no .gitignore, no licence), and pick Private or Public.
 2. **Push**: in this folder run `git push -u origin main`. The first time, Git opens a browser window to sign in to GitHub.
-3. **Import to Vercel**: on vercel.com sign in with GitHub, then *Add New… → Project → Import* `U-Harshitha/portfolio`. Vercel detects Astro; `vercel.json` already sets the build (`npm run build`) and output (`dist`). Click **Deploy**.
+3. **Import to Vercel**: on vercel.com sign in with GitHub, then *Add New… → Project → Import* `U-Harshitha/Portfolio`. Vercel detects Astro; `vercel.json` already sets the build (`npm run build`) and output (`dist`). Click **Deploy**.
 4. Your site is live at `https://portfolio-<something>.vercel.app`. Share previews, the sitemap and robots.txt use that address automatically.
 5. **Nicer address (optional)**: in Vercel, *Project → Settings → Domains*, either rename the `.vercel.app` subdomain (e.g. `harshitha.vercel.app` if it's free) or add a domain you own. If you use a custom domain, also add `SITE_URL=https://yourdomain` under *Settings → Environment Variables* and redeploy.
 
