@@ -1,0 +1,64 @@
+{
+  "_note": "Grouped by what you do with them, not by logo. Edit freely.",
+  "groups": [
+    {
+      "title": "Systems & infrastructure",
+      "items": [
+        "Kubernetes",
+        "Docker",
+        "GCP",
+        "Linux",
+        "Networking",
+        "Distributed systems",
+        "CI/CD",
+        "Shell"
+      ]
+    },
+    {
+      "title": "Languages",
+      "items": [
+        "Java",
+        "Go",
+        "Python",
+        "C++",
+        "TypeScript",
+        "JavaScript",
+        "Scala",
+        "R"
+      ]
+    },
+    {
+      "title": "AI & data",
+      "items": [
+        "PyTorch",
+        "TensorFlow",
+        "scikit-learn",
+        "LangGraph",
+        "RAG",
+        "NLP",
+        "AI agents",
+        "Qdrant"
+      ]
+    },
+    {
+      "title": "Web & APIs",
+      "items": [
+        "React",
+        "Angular",
+        "Node.js",
+        "Flask",
+        "gRPC",
+        "REST",
+        "MongoDB",
+        "MCP"
+      ]
+    }
+  ],
+  "wins": [
+    "Top 1% of 25,000+ applicants, Google Women Engineers Program (scholarship and two-year mentorship)",
+    "1st place, JPMC Code for Good hackathon, leading the team",
+    "3rd place, BVRIT Yukti hackathon, built in 24 hours",
+    "Top 100, ACM inter-college coding contest"
+  ],
+  "education": "B.Tech, Computer Science and Business Systems, VNRVJIET, 2022 to 2026"
+}

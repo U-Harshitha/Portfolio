@@ -1,0 +1,29 @@
+{
+  "_note": "Photos for the RAM (memories) room. Run `npm run media` after dropping new originals into PersonalDetails/Pictures, then add an entry here.",
+  "photos": [
+    {
+      "src": "/media/photos/photo-01",
+      "alt": "Google Cloud office wall with a colourful geometric mural",
+      "caption": "Google Cloud, where the networking happens."
+    },
+    {
+      "src": "/media/photos/photo-02",
+      "alt": "A counter of rainbow cupcakes and cookies at an office celebration",
+      "caption": "An office celebration. The cupcakes did not survive."
+    }
+  ],
+  "rotation": [
+    {
+      "label": "Films",
+      "value": "Heists, space, and anything with a soundtrack that does half the storytelling."
+    },
+    {
+      "label": "Music",
+      "value": "Whatever I'm choreographing to this week, on loop."
+    },
+    {
+      "label": "Places",
+      "value": "Hyderabad, where I studied. Bengaluru, where I work. More pins soon."
+    }
+  ]
+}

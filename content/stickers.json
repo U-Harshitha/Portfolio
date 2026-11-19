@@ -1,0 +1,61 @@
+{
+  "_note": "Comic stickers on the laptop lid. Click one on the site to read it. kind: travel | hobby. icon: plane, camera, clapper, headphones, sneaker, code, books, mic, pin",
+  "stickers": [
+    {
+      "id": "travel",
+      "icon": "plane",
+      "kind": "travel",
+      "title": "Places",
+      "text": "Hyderabad, where I studied, to Bengaluru, where I work. The map gets more pins every year."
+    },
+    {
+      "id": "photo",
+      "icon": "camera",
+      "kind": "hobby",
+      "title": "Photography",
+      "text": "Buildings, light, and people mid-laugh."
+    },
+    {
+      "id": "films",
+      "icon": "clapper",
+      "kind": "hobby",
+      "title": "Films",
+      "text": "Heists and space films. Bonus points for a great soundtrack."
+    },
+    {
+      "id": "music",
+      "icon": "headphones",
+      "kind": "hobby",
+      "title": "Music",
+      "text": "Whatever I'm choreographing to this week, on loop."
+    },
+    {
+      "id": "dance",
+      "icon": "sneaker",
+      "kind": "hobby",
+      "title": "Dance",
+      "text": "The speakers part has the clips. Go on, open it."
+    },
+    {
+      "id": "build",
+      "icon": "code",
+      "kind": "hobby",
+      "title": "Building with AI",
+      "text": "I build tools for myself, like a Life OS dashboard and an interactive house-plan viewer."
+    },
+    {
+      "id": "books",
+      "icon": "books",
+      "kind": "hobby",
+      "title": "Reading",
+      "text": "Papers and books. The battery and keyboard parts have my takeaways."
+    },
+    {
+      "id": "home",
+      "icon": "pin",
+      "kind": "travel",
+      "title": "Home base",
+      "text": "Bengaluru, India."
+    }
+  ]
+}

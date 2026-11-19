@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.astro/
+.vercel/
+.netlify/
+.claude/
+# raw originals stay local; processed web versions live in public/media
+PersonalDetails/
+*.log
+.DS_Store
+.env
+.env.*
+# your resume has a phone number on it: kept out of git until there is a public version
+public/resume.pdf
+# working material: reference screenshots of other sites and the private brief stay local
+Inspirations/
+portfolio-build-prompt.md

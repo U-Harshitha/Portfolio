@@ -1,0 +1,13 @@
+---
+// Muted, looping clip. Nothing downloads until the visitor presses play.
+const { src, poster, label } = Astro.props;
+---
+<div class="video" data-video data-x="Video.astro · preload=none, muted">
+  <video muted loop playsinline preload="none" poster={poster} aria-label={label} width="480" height="854">
+    <source src={`${src}.webm`} type="video/webm" />
+    <source src={`${src}.mp4`} type="video/mp4" />
+  </video>
+  <button class="video-toggle" type="button" aria-pressed="false">
+    <span class="when-paused">Play clip</span><span class="when-playing">Pause</span>
+  </button>
+</div>

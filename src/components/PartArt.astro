@@ -1,0 +1,102 @@
+---
+// Comic illustrations of each laptop part, shown big at the top of its room.
+// Thick ink outlines, flat fills, a little wobble. `c` is the part colour.
+const { id, c } = Astro.props;
+const ink = '#1C1B22';
+const paper = '#FFFDF7';
+---
+<svg class="part-art" viewBox="0 0 320 220" aria-hidden="true" fill="none" stroke={ink} stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+  {id === 'screen' && (
+    <g>
+      <rect x="40" y="18" width="240" height="150" rx="14" fill="#17161D" />
+      <rect x="56" y="34" width="208" height="118" rx="4" fill={c} stroke-width="4" />
+      <path d="M78 66h40M78 86h96M78 106h66" stroke={ink} stroke-width="8" />
+      <circle cx="226" cy="98" r="26" fill={paper} stroke-width="5" />
+      <path d="M212 108q14 12 28 0" stroke-width="5" />
+      <path d="M20 190h280l-24-22H44z" fill="#3A3946" />
+    </g>
+  )}
+  {id === 'cpu' && (
+    <g>
+      {[0, 1, 2, 3, 4, 5, 6].map((k) => <path d={`M${92 + k * 23} 22v24M${92 + k * 23} 174v24M70 ${44 + k * 21}h-24M250 ${44 + k * 21}h24`} stroke-width="6" />)}
+      <rect x="70" y="40" width="180" height="140" rx="14" fill="#1F2A2A" />
+      <rect x="96" y="62" width="128" height="96" rx="8" fill={c} />
+      <text x="160" y="124" text-anchor="middle" fill={paper} stroke="none" font-family="var(--font-mono)" font-weight="800" font-size="34">CPU</text>
+    </g>
+  )}
+  {id === 'ssd' && (
+    <g>
+      <rect x="22" y="78" width="276" height="70" rx="10" fill="#1D3A2C" />
+      <rect x="44" y="88" width="170" height="50" rx="4" fill={c} stroke-width="4" />
+      <text x="58" y="122" fill={ink} stroke="none" font-family="var(--font-mono)" font-weight="800" font-size="24">SSD 1TB</text>
+      <path d="M240 90v46M256 90v46M272 90v46" stroke="#C7A54A" stroke-width="7" />
+      <circle cx="292" cy="113" r="9" fill={paper} stroke-width="4" />
+    </g>
+  )}
+  {id === 'gpu' && (
+    <g>
+      <rect x="20" y="44" width="280" height="132" rx="16" fill={c} />
+      <circle cx="120" cy="110" r="52" fill="#17161D" />
+      {[0, 1, 2, 3, 4, 5].map((k) => <path d={`M120 110 l${Math.cos(k) * 46} ${Math.sin(k) * 46}`} stroke={paper} stroke-width="7" />)}
+      <circle cx="120" cy="110" r="14" fill={paper} stroke-width="5" />
+      <rect x="196" y="72" width="80" height="76" rx="6" fill="#C7A54A" stroke-width="5" />
+      <path d="M208 84v52M224 84v52M240 84v52M256 84v52" stroke-width="4" />
+    </g>
+  )}
+  {id === 'ram' && (
+    <g>
+      {[0, 1].map((r) => (
+        <g transform={`translate(0 ${r * 74})`}>
+          <rect x="20" y="40" width="280" height="56" rx="8" fill={c} />
+          {[0, 1, 2, 3, 4, 5].map((k) => <rect x={36 + k * 44} y="52" width="32" height="26" rx="3" fill="#17161D" stroke-width="3" />)}
+          <path d="M28 96h264" stroke="#C7A54A" stroke-width="8" stroke-dasharray="6 5" />
+        </g>
+      ))}
+    </g>
+  )}
+  {id === 'speakers' && (
+    <g>
+      {[60, 200].map((x) => (
+        <g>
+          <rect x={x} y="30" width="80" height="160" rx="18" fill="#2A2830" />
+          <circle cx={x + 40} cy="78" r="22" fill={c} />
+          <circle cx={x + 40} cy="140" r="30" fill={c} />
+          <circle cx={x + 40} cy="140" r="10" fill={ink} />
+        </g>
+      ))}
+      <path d="M30 70q-14 40 0 80M16 56q-24 54 0 108M290 70q14 40 0 80M304 56q24 54 0 108" stroke={c} stroke-width="6" />
+    </g>
+  )}
+  {id === 'battery' && (
+    <g>
+      <rect x="30" y="60" width="240" height="110" rx="16" fill="#20222A" />
+      <rect x="270" y="94" width="22" height="42" rx="6" fill="#20222A" />
+      <rect x="46" y="76" width="64" height="78" rx="8" fill={c} stroke-width="4" />
+      <rect x="118" y="76" width="64" height="78" rx="8" fill={c} stroke-width="4" />
+      <rect x="190" y="76" width="64" height="78" rx="8" fill={c} stroke-width="4" opacity=".55" />
+      <path d="M160 26l-22 34h20l-12 30 34-42h-20l14-22z" fill="#F2B705" stroke-width="5" />
+    </g>
+  )}
+  {id === 'keyboard' && (
+    <g>
+      <rect x="16" y="50" width="288" height="130" rx="14" fill="#2C2B35" />
+      {[0, 1, 2].map((r) => [0, 1, 2, 3, 4, 5, 6, 7].map((k) => <rect x={30 + k * 33} y={62 + r * 34} width="27" height="27" rx="5" fill={r === 0 && k === 7 ? '#F2B705' : c} stroke-width="3" />))}
+      <rect x="96" y="164" width="128" height="10" rx="4" fill={paper} stroke-width="3" />
+    </g>
+  )}
+  {id === 'wifi' && (
+    <g>
+      <rect x="90" y="110" width="140" height="80" rx="10" fill={c} />
+      <circle cx="140" cy="140" r="10" fill="#C7A54A" stroke-width="4" />
+      <circle cx="180" cy="140" r="10" fill="#C7A54A" stroke-width="4" />
+      <path d="M100 80q60-56 120 0M120 96q40-34 80 0M140 110q20-14 40 0" stroke={c} stroke-width="9" />
+    </g>
+  )}
+  {id === 'trackpad' && (
+    <g>
+      <rect x="40" y="40" width="240" height="150" rx="22" fill="#4A4957" />
+      <path d="M150 150V90q0-12 12-12t12 12v34l26 6q12 4 10 18l-6 28h-58l-22-30q-6-10 4-14z" fill={paper} stroke-width="5" />
+      <path d="M140 70q22-26 44 0" stroke={c === '#2B2B33' ? '#F2B705' : c} stroke-width="5" />
+    </g>
+  )}
+</svg>

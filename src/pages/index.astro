@@ -1,0 +1,165 @@
+---
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Room from '../components/Room.astro';
+import site from '../../content/site.config';
+import stickers from '../../content/stickers.json';
+import { loadAll, todoText, isDark, hasResume } from '../lib/content';
+
+const data = await loadAll();
+const changelog = await Promise.all(data.changelog.map(async (e) => ({ d: e.data, Content: (await render(e)).Content })));
+const L = site.links as Record<string, string>;
+const version = data.changelog[0]?.data.version ?? 'v1.0';
+
+// Everything the 3D script needs, handed over as data (no content lives in the script).
+const payload = {
+  parts: data.parts.map((p) => ({ id: p.id, color: p.color, title: p.title, aspect: p.aspect, joke: p.joke })),
+  stickers: stickers.stickers.map((s) => ({ id: s.id, icon: s.icon, title: s.title, text: todoText(s.text), todo: s.text.includes('TODO(') })),
+  order: site.partsOrder,
+};
+---
+<Base>
+  <a class="skip-link" href="#parts">Skip to the list of parts</a>
+
+  <header class="topbar" data-x="index.astro · topbar">
+    <a class="mark" href="/" aria-label="Harshitha Upadhyayula, home">
+      <span class="mark-glyph" aria-hidden="true">H.U.</span>
+      <span class="mark-sub mono">teardown {version}</span>
+    </a>
+    <div class="tools">
+      <button class="tool tool-break" type="button" id="break-toggle" aria-pressed="false">
+        <span class="when-off">Take it apart</span><span class="when-on">Put it back</span>
+      </button>
+      <button class="tool" type="button" id="xray-toggle" aria-pressed="false" title="See how this site is built">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="1" /><path d="M3 8h14M3 12h14M8 3v14M12 3v14" /></svg>
+        <span class="tool-label">X-ray</span>
+      </button>
+      <button class="tool" type="button" id="theme-toggle" title="Switch light or dark">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5" /><path d="M10 3.5a6.5 6.5 0 0 1 0 13z" class="fill" /></svg>
+        <span class="sr-only">Switch theme, currently </span><span class="theme-label tool-label" aria-live="polite">light</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="hero" id="hero" aria-label="The laptop">
+    <div class="sticky" data-x="laptop.ts · three.js, built from code, no model files">
+      <canvas id="laptop-canvas" aria-hidden="true"></canvas>
+
+      <div class="hero-copy">
+        <h1 class="name"><span>Harshitha</span> <span>Upadhyayula</span></h1>
+        <p class="tagline">{site.tagline}</p>
+        <p class="role">{site.role}.</p>
+        <p class="now"><span class="now-key">Now</span> <span>{site.now.text}</span></p>
+        <p class="hero-how">Scroll to take my laptop apart. Open any part to see that side of me, and it clicks back in.</p>
+        <p class="ctas">
+          <a class="btn btn-primary" href="#parts" data-action="tear">Take it apart</a>
+          {hasResume ? <a class="btn" href={L.resume} download>Resume</a> : <a class="btn" href={L.linkedin} target="_blank" rel="noopener">LinkedIn</a>}
+        </p>
+      </div>
+
+      <p class="scroll-cue" aria-hidden="true">scroll to take it apart <span>↓</span></p>
+      <p class="pick-title" aria-hidden="true">pick a part, any part</p>
+
+      <div class="labels" id="labels">
+        {data.parts.map((p) => (
+          <button class="plabel" type="button" data-open={p.id} data-part={p.id} style={`--c:${p.color}`} aria-label={`Open ${p.title}: ${p.aspect}`}>
+            <span class="pl-dot" aria-hidden="true"></span>
+            <span class="pl-text">
+              <span class="pl-name">{p.title}</span>
+              <span class="pl-aspect">{p.aspect}</span>
+            </span>
+          </button>
+        ))}
+        <span class="plabel plabel-stickers scribble" data-part="stickers" aria-hidden="true">stickers! tap one</span>
+      </div>
+
+      <div class="cursors" id="cursors" aria-hidden="true">
+        {['#2F80ED', '#F2994A', '#EB5757'].map((c) => (
+          <div class="cursor" style={`--cc:${c}`}><svg viewBox="0 0 24 24"><path d="M3 2l17 9.5-7.4 1.6L9 20z" /></svg></div>
+        ))}
+      </div>
+
+      <div class="rebuild" id="rebuild" role="status" aria-live="polite" hidden>
+        <p class="rb-line"><strong id="rebuild-count">0</strong>/{data.parts.length} parts back in</p>
+        <p class="rb-done">Rebuilt. Build, break, rebuild.</p>
+        <span class="rb-dots" aria-hidden="true">
+          {data.parts.map((p) => <span class="rb-dot" data-part={p.id} style={`--c:${p.color}`}></span>)}
+        </span>
+        <button class="rb-reset" type="button" id="rebuild-reset">Take it apart again</button>
+      </div>
+
+      <div class="sticker-pop" id="sticker-pop" role="status" aria-live="polite" hidden>
+        <p class="sp-title"></p>
+        <p class="sp-text"></p>
+      </div>
+
+      <div class="xray-legend mono" aria-label="How this page is built">
+        <strong>how it's built</strong>
+        <ol class="flow">
+          <li>content/*.md</li>
+          <li>Astro build</li>
+          <li>HTML + three.js laptop</li>
+          <li>Netlify</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="index" id="parts" aria-labelledby="parts-title" data-x="site.config.ts → partsOrder">
+    <h2 id="parts-title" class="index-title">Or skip the screwdriver</h2>
+    <ul class="chips">
+      {data.parts.map((p) => (
+        <li>
+          <a class="chip" href={`#${p.id}`} data-open={p.id} data-part={p.id} data-dark={isDark(p.color) ? 'true' : 'false'} style={`--c:${p.color}`}>
+            <span class="chip-name">{p.title}</span>
+            <span class="chip-aspect">{p.aspect}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <footer class="site-foot">
+      <span class="social">
+        <a href={L.linkedin} target="_blank" rel="noopener">LinkedIn</a>
+        {L.github && <a href={L.github} target="_blank" rel="noopener">GitHub</a>}
+        {L.instagram && <a href={L.instagram} target="_blank" rel="noopener">Instagram</a>}
+        {L.youtube && <a href={L.youtube} target="_blank" rel="noopener">YouTube</a>}
+        {hasResume && <a href={L.resume} download>Resume</a>}
+      </span>
+      <span class="foot-right">
+        <a class="mono changelog-link" href="#changelog" data-open="changelog">changelog {version}</a>
+        <span class="mono copyright">© {new Date().getFullYear()} {site.name}</span>
+      </span>
+    </footer>
+  </section>
+
+  <dialog id="room" class="room" aria-labelledby="room-title-live" data-x="dialog#room · part on the left, story on the right">
+    <div class="room-stage" id="room-stage">
+      <button class="back" type="button" id="room-close"><span aria-hidden="true">←</span> back to the laptop</button>
+      <p class="stage-joke scribble" id="stage-joke"></p>
+      <p class="stage-hint mono" aria-hidden="true">drag to turn it · it clicks back in when you leave</p>
+    </div>
+    <div class="room-panel">
+      <span id="room-title-live" class="sr-only">Part details</span>
+      <div class="room-scroll" id="room-scroll">
+        {data.parts.map((p) => <Room part={p} data={data} />)}
+        <article class="room-page" id="changelog" data-part="changelog" style="--c:#F2B705" aria-labelledby="changelog-title">
+          <header class="room-head">
+            <p class="room-part mono">changelog</p>
+            <h2 id="changelog-title" class="room-title">What broke, what changed</h2>
+            <div class="room-lede"><p>This site gets built, broken and rebuilt like everything else I make.</p></div>
+          </header>
+          <div class="room-body">
+            <section class="sec">
+              {changelog.map(({ d, Content }) => (<article class="note"><p class="kind mono">{d.version}, {d.date}</p><div class="body"><Content /></div></article>))}
+            </section>
+          </div>
+        </article>
+      </div>
+    </div>
+  </dialog>
+
+  <script id="laptop-data" type="application/json" set:html={JSON.stringify(payload)}></script>
+  <script>
+    import '../scripts/site.ts';
+  </script>
+</Base>
