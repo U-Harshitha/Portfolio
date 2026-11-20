@@ -3,6 +3,10 @@
   "framework": "astro",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/hangman", "destination": "https://hangman-in-phoenix.onrender.com/hangman" },
+    { "source": "/hangman/:path*", "destination": "https://hangman-in-phoenix.onrender.com/hangman/:path*" }
+  ],
   "headers": [
     {
       "source": "/_astro/(.*)",

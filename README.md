@@ -108,6 +108,12 @@ Anything starting with `TODO(harshitha)` shows up on the page with a yellow dash
 
 After that, every `git push` redeploys the site automatically.
 
+### Hangman game at /hangman
+`/hangman` is proxied (see `rewrites` in `vercel.json`) to the Phoenix app from
+[U-Harshitha/Hangman-in-Phoenix](https://github.com/U-Harshitha/Hangman-in-Phoenix), hosted on Render.
+Link to it with a plain `<a href="/hangman">`. If the Render service URL ever changes, update both
+`destination` hosts in `vercel.json`.
+
 **Resume**: `public/resume.pdf` is kept out of git because your current resume shows your phone number. Resume buttons hide themselves when the file isn't there. To publish one: save a version without the phone number as `public/resume.pdf`, delete the last two lines of `.gitignore`, then `git add public/resume.pdf .gitignore && git commit -m "Add resume" && git push`.
 
 ## Where things are
