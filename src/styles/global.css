@@ -227,7 +227,8 @@ button { font: inherit; color: inherit; }
 .room-open .topbar, .room-open .labels, .room-open .pick-title, .room-open .rebuild, .room-open .hero-copy, .room-open .scroll-cue, .room-open .cursors { opacity: 0 !important; pointer-events: none; }
 /* the page behind an open part stays put */
 html { scrollbar-gutter: stable; }
-html.room-open, html.room-open body { overflow: hidden; }
+/* lock the page (only the root: locking <body> too breaks the sticky 3D stage) */
+html.room-open { overflow: hidden; }
 .rebuilt .cursors, .rebuilt .pick-title { opacity: 0 !important; }
 .room::backdrop { background: transparent; }
 /* without a 3D part (changelog, or no WebGL) the page tints itself */

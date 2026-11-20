@@ -408,6 +408,7 @@ interface PartRig {
   id: string | null; group: Group; a: (lid: number) => Pose; e: Pose; win: [number, number];
   lift: number; phase: number; order: 'XYZ' | 'YXZ'; side: number;
   inst: number; instTarget: number; show: number; showTarget: number; radius: number; tilt: Euler; onTop: boolean;
+  arc: Vector3; // a sideways bulge in the teardown path, so parts that start together part ways cleanly
 }
 const easeBack = (t: number) => { const c = 1.4; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 
@@ -507,7 +508,7 @@ export function createLaptop(o: Options): LaptopApi {
     const radius = new Box3().setFromObject(group).getSize(new Vector3()).length() / 2;
     rigs.push({
       id, group, a: typeof a === 'function' ? a : () => a, e, win, lift: 0, phase: rigs.length * 1.37, order: 'XYZ', side,
-      inst: 0, instTarget: 0, show: 0, showTarget: 0, radius, tilt: new Euler(...tilt), onTop: false,
+      inst: 0, instTarget: 0, show: 0, showTarget: 0, radius, tilt: new Euler(...tilt), onTop: false, arc: new Vector3(),
     });
     return rigs[rigs.length - 1];
   };
@@ -733,14 +734,15 @@ export function createLaptop(o: Options): LaptopApi {
       m.userData.sticker = s.id;
       g.add(m);
     });
-  }, (lid) => pose([0, 0.225, -1.1], [OPEN * lid, 0, 0]), pose([-3.0, 2.15, -2.3], [-1.72, Math.PI, 0], 0.74), [0.0, 0.62]);
+  }, (lid) => pose([0, 0.225, -1.1], [OPEN * lid, 0, 0]), pose([-3.0, 2.15, -2.6], [-1.72, Math.PI, 0], 0.74), [0.14, 0.72]);
   lidRig.order = 'YXZ';
+  lidRig.arc.set(-0.6, 0.35, -1.3); // the lid swings back and left, away from the screen
 
   // ── screen: thin glossy bezel, camera notch, a live display under glass, and light that spills onto the keys
   const screen = makeScreen();
   const dispMat = new MeshBasicMaterial({ map: screen.tex, toneMapped: false, color: new Color(0, 0, 0) });
   const spill = new PointLight('#9cc4ff', 0, 3.2, 1.6);
-  add('screen', (g) => {
+  const screenRig = add('screen', (g) => {
     g.add(mesh(rb(3.14, 0.022, 2.09, 0.05), mat('#08080a', { rough: 0.12, metal: 0.1, env: 0.9, coat: 1, coatRough: 0.03 }), [0, -0.018, 1.075]));
     const disp = new Mesh(new PlaneGeometry(3.04, 1.95), dispMat);
     disp.rotation.x = Math.PI / 2;
@@ -753,7 +755,8 @@ export function createLaptop(o: Options): LaptopApi {
     g.add(mesh(new CylinderGeometry(0.014, 0.014, 0.004, 24), mat('#16233a', { rough: 0.05, env: 1.5, coat: 1 }), [0, -0.034, 2.065], false));
     spill.position.set(0, -0.6, 0.9);
     g.add(spill);
-  }, (lid) => pose([0, 0.225, -1.1], [OPEN * lid, 0, 0]), pose([3.0, 2.15, -2.35], [-1.72, 0, 0], 0.84), [0.0, 0.6], [-1.72, 0, 0]);
+  }, (lid) => pose([0, 0.225, -1.1], [OPEN * lid, 0, 0]), pose([3.0, 2.25, -2.1], [-1.72, 0, 0], 0.84), [0.0, 0.55], [-1.72, 0, 0]);
+  screenRig.arc.set(0.6, 0.45, 1.2); // the screen comes forward and right first, clear of the lid
 
   /* ───────────── state ───────────── */
   let target = 0, prog = 0, lid = o.reducedMotion ? 1 : 0, lidTarget = lid;
@@ -807,6 +810,7 @@ export function createLaptop(o: Options): LaptopApi {
       qA.setFromEuler(e1.set(A.rot[0], A.rot[1], A.rot[2], r.order));
       r.group.position.lerpVectors(pA, pE, t);
       r.group.position.y += r.lift + Math.sin(time * 0.8 + r.phase) * 0.07 * floatAmt * loose;
+      r.group.position.addScaledVector(r.arc, Math.sin(Math.PI * t) * loose); // bulges mid-flight, zero at both ends
       qF.slerpQuaternions(qA, qE, t);
       sway.setFromEuler(e1.set(Math.sin(time * 0.6 + r.phase) * 0.035 * floatAmt * loose, 0, Math.cos(time * 0.5 + r.phase) * 0.035 * floatAmt * loose, 'XYZ'));
       qF.multiply(sway);
@@ -859,7 +863,7 @@ export function createLaptop(o: Options): LaptopApi {
     showcasePoint(scrim.position, 11);
     scrim.quaternion.copy(camera.quaternion);
     scrim.scale.set(30, 30, 1);
-    (scrim.material as MeshBasicMaterial).opacity = scrimAmt * 0.97;
+    (scrim.material as MeshBasicMaterial).opacity = scrimAmt * 0.62; // translucent: the split laptop shows through, tinted
     scrim.visible = scrimAmt > 0.002;
   }
 

@@ -207,7 +207,8 @@ function fillPage(id: string) {
 async function openRoom(id: string, { push = true } = {}) {
   if (!pageFor(id)) return;
   // the 3D stage must be on screen: jump to the torn-down view if we're below it
-  if (laptop && partInfo(id) && hero.getBoundingClientRect().bottom < innerHeight * 0.5) scrollTo({ top: tornEnd() });
+  // parts always open over the taken-apart laptop, so the split machine sits behind the tint
+  if (laptop && partInfo(id) && Math.abs(scrollY - tornEnd()) > 2) { scrollTo({ top: tornEnd() }); onScroll(); }
   if (!room.open) opener = document.activeElement as HTMLElement;
   if (push && location.hash !== `#${id}`) { history.pushState({ part: id }, '', `#${id}`); pushed = true; }
   current = id;
