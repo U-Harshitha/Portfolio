@@ -1,0 +1,9 @@
+---
+// A responsive photo from public/media/photos (made by `npm run media`).
+const { src, alt, sizes = '(min-width: 900px) 300px, 45vw', w = 480, h = 600, cls } = Astro.props;
+---
+<picture class={cls}>
+  <source type="image/avif" srcset={`${src}-480.avif 480w, ${src}-960.avif 960w`} sizes={sizes} />
+  <source type="image/webp" srcset={`${src}-480.webp 480w, ${src}-960.webp 960w`} sizes={sizes} />
+  <img src={`${src}-480.jpg`} alt={alt} width={w} height={h} loading="lazy" decoding="async" />
+</picture>

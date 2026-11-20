@@ -1,24 +1,41 @@
 ---
-// One full-screen room per laptop part. The part's `room` decides what's inside.
+// One room per laptop part. The part's `room` decides what's inside.
+// Rooms that are still being decided ship several designs (v-a, v-b …) and names; the picker bar
+// switches between them while `site.preview` is on and the part isn't marked `final`.
 import { readdirSync, existsSync } from 'node:fs';
 import { render } from 'astro:content';
 import site from '../../content/site.config';
 import skills from '../../content/skills.json';
 import photos from '../../content/photos.json';
-import stickers from '../../content/stickers.json';
 import { isTodo, todoText, isDark, hasResume } from '../lib/content';
 import Video from './Video.astro';
 import PartArt from './PartArt.astro';
+import Pic from './Pic.astro';
 
 const { part, data } = Astro.props;
-// each local clip gets its own motion-study frames (made by `npm run media`)
+const { room, color } = part;
+const names: string[] = part.names?.length ? part.names : [part.aspect];
+const variant: string = part.design ?? 'a';
+const nameIdx: number = Math.max(0, Math.min(names.length - 1, (part.name ?? 1) - 1));
+
+// Rooms still choosing a design. Finalised rooms have one design and no entry here.
+const DESIGNS: Record<string, string[]> = {
+  intro: ['Letter', 'Boot log', 'Chat', 'Profile'],
+  experience: ['Timeline', 'Commit log', 'Datasheet'],
+  dance: ['Reel', 'Count sheet', 'Now playing'],
+  contact: ['Command bar'],
+};
+const designs = DESIGNS[room] ?? [];
+const LETTERS = 'abcdef';
+const showPicker = site.preview && !part.final;
+
 const framesFor = (src?: string) => {
   if (!src) return [];
   const dir = `public${src}-frames`;
   return existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.jpg')).sort().map((f) => `${src}-frames/${f}`) : [];
 };
+const hash = (s: string) => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0).toString(16).padStart(8, '0').slice(0, 7); };
 const portrait = (photos as { portrait?: string }).portrait;
-const { room, color } = part;
 const withBody = async (list: any[]) => Promise.all(list.map(async (e) => ({ e, d: e.data, Content: (await render(e)).Content })));
 
 const { Content: Intro } = await render(part.entry);
@@ -31,55 +48,126 @@ const L = site.links;
 const ext = { target: '_blank', rel: 'noopener' };
 const mine = reading.filter((r) => r.d.kind === 'my-research');
 const papers = reading.filter((r) => r.d.kind === 'paper');
-const books = reading.filter((r) => r.d.kind === 'book');
-const sources = reading.filter((r) => r.d.kind === 'source');
-// dark rooms keep light text; everything else uses ink on the colour
+const charged = reading.filter((r) => r.d.kind === 'book' || r.d.kind === 'source');
 const dark = isDark(color);
+const facts: [string, string][] = [
+  ['now', site.now.text],
+  ['work', site.role],
+  ['based', 'Bengaluru, India'],
+  ['studied', skills.education],
+];
+const contacts = [
+  { label: 'LinkedIn', detail: '/in/harshitha-upadhyayula', href: L.linkedin, key: 'L', ext: true },
+  L.github && { label: 'GitHub', detail: 'U-Harshitha', href: L.github, key: 'G', ext: true },
+  L.email && { label: 'Email', detail: L.email, href: `mailto:${L.email}`, key: 'E', ext: false },
+  L.instagram && { label: 'Instagram', detail: 'dance', href: L.instagram, key: 'I', ext: true },
+  hasResume && { label: 'Resume', detail: 'PDF', href: L.resume, key: 'R', ext: false, download: true },
+].filter(Boolean) as { label: string; detail: string; href: string; key: string; ext: boolean; download?: boolean }[];
+const isCurrent = (end: string) => /present/i.test(end);
+const COUNTS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+const bootLines: [string, string][] = [
+  ['Checking curiosity', 'OK'],
+  ['Mounting /dance', 'OK'],
+  ['Loading networking stack', 'OK (GCVE)'],
+  ['Caching papers, films, music', 'OK'],
+  ['Starting build → break → rebuild', 'OK'],
+];
+const chat: [string, string][] = [
+  ['them', 'hi! who are you?'],
+  ['me', "I'm Harshitha. I work on networking for Google Cloud VMware Engine."],
+  ['them', 'what do you do when you are not working?'],
+  ['me', 'Dance, read papers, organise events, and build small tools that run my own days.'],
+  ['them', "what's with the laptop?"],
+  ['me', "It's me, taken apart. Open any part and it clicks back in when you're done."],
+];
 ---
-<article class="room-page" id={part.id} data-part={part.id} data-room={room} data-dark={dark ? 'true' : 'false'} style={`--c:${color}`} aria-labelledby={`${part.id}-title`} data-x={`content/parts/${part.id}.md → Room.astro room="${room}"`}>
+<article
+  class="room-page" id={part.id} data-part={part.id} data-room={room} data-dark={dark ? 'true' : 'false'}
+  data-variant={variant} data-names={JSON.stringify(names)} data-designs={JSON.stringify(designs)}
+  style={`--c:${color}`} aria-labelledby={`${part.id}-title`} data-x={`content/parts/${part.id}.md → Room.astro room="${room}"`}
+>
   <header class="room-head">
-    {/* the 3D part is the illustration; this drawing only shows without WebGL */}
+    {showPicker && (
+      <div class="picker" role="group" aria-label="Preview options for this part">
+        {designs.length > 1 && (
+          <>
+            <span class="picker-label mono">design</span>
+            {designs.map((d, i) => (
+              <button type="button" data-v={LETTERS[i]} aria-pressed={LETTERS[i] === variant ? 'true' : 'false'} title={d}><b>{LETTERS[i].toUpperCase()}</b> {d}</button>
+            ))}
+          </>
+        )}
+        <button type="button" class="picker-copy mono" data-copy-picks>copy my picks</button>
+        <span class="picker-break" aria-hidden="true"></span>
+        <span class="picker-label mono">name</span>
+        {names.map((n, i) => (
+          <button type="button" data-n={i} aria-pressed={i === nameIdx ? 'true' : 'false'} title={n}><b>{i + 1}</b> {n}</button>
+        ))}
+      </div>
+    )}
     <figure class="room-art"><PartArt id={part.id} c={color} /></figure>
     <p class="room-part mono">{part.title}</p>
-    <h2 id={`${part.id}-title`} class="room-title">{part.aspect}</h2>
+    <h2 id={`${part.id}-title`} class="room-title">{names[nameIdx]}</h2>
     <div class="room-lede"><Intro /></div>
   </header>
 
   <div class="room-body">
+
+    {/* ═════════════ SCREEN: intro (A letter · B boot log · C chat · D profile) ═════════════ */}
     {room === 'intro' && (
       <>
-        <section class="sec sec-intro">
-          <div class="portrait">
-            {portrait ? (
-              <picture class="portrait-photo">
-                <source type="image/avif" srcset={`${portrait}-480.avif 480w, ${portrait}-960.avif 960w`} sizes="(min-width: 900px) 280px, 70vw" />
-                <source type="image/webp" srcset={`${portrait}-480.webp 480w, ${portrait}-960.webp 960w`} sizes="(min-width: 900px) 280px, 70vw" />
-                <img src={`${portrait}-480.jpg`} alt="Harshitha Upadhyayula" width="480" height="600" loading="lazy" decoding="async" />
-              </picture>
-            ) : (
-              <div class="portrait-frame" aria-hidden="true">
-                <span class="monogram">HU</span>
-                <span class="mono fine">photo loading… eventually</span>
-              </div>
-            )}
+        <section class="sec v-a">
+          <div class="letter">
+            <div class="letter-photo">{portrait ? <Pic src={portrait} alt="Harshitha Upadhyayula" /> : <div class="portrait-frame" aria-hidden="true"><span class="monogram">HU</span></div>}</div>
+            <p class="letter-hi scribble">Hi, I'm Harshitha.</p>
+            <p>I work on networking for Google Cloud VMware Engine. I'm the person who keeps asking "but how does that actually work?" until I can draw it on a whiteboard.</p>
+            <p>This laptop is me, taken apart. Every part you open clicks back in when you're done.</p>
+            <p class="letter-sign scribble">— H.</p>
           </div>
-          <div class="intro-facts">
-            <h3>The short version</h3>
-            <dl class="facts">
-              <dt>Now</dt><dd>{site.now.text}</dd>
-              <dt>Work</dt><dd>{site.role}</dd>
-              <dt>Based in</dt><dd>Bengaluru, India</dd>
-              <dt>Studied</dt><dd>{skills.education}</dd>
-            </dl>
-            <p class="actions"><a class="btn btn-primary" href="#cpu" data-open="cpu">See my work</a><a class="btn" href="#trackpad" data-open="trackpad">Say hi</a></p>
+          <dl class="facts">{facts.map(([k, v]) => (<><dt>{k}</dt><dd>{v}</dd></>))}</dl>
+        </section>
+
+        <section class="sec v-b">
+          <div class="boot mono">
+            <p class="boot-title">HU-BIOS v21 · Bengaluru</p>
+            {bootLines.map(([k, s]) => <p class="boot-line"><span>{k}</span><span class="boot-dots" aria-hidden="true"></span><b>{s}</b></p>)}
+            <p class="boot-ready">Booting Harshitha<span class="t-cursor"></span></p>
+          </div>
+          <div class="boot-out">
+            <div class="boot-photo">{portrait ? <Pic src={portrait} alt="Harshitha Upadhyayula" /> : <span class="monogram">HU</span>}</div>
+            <dl class="facts">{facts.map(([k, v]) => (<><dt>{k}</dt><dd>{v}</dd></>))}</dl>
           </div>
         </section>
+
+        <section class="sec v-c">
+          <div class="chat">
+            {chat.map(([who, text]) => (
+              <div class:list={['bubble-row', who]}>
+                {who === 'me' && <span class="chat-avatar" aria-hidden="true">{portrait ? <Pic src={portrait} alt="" sizes="40px" /> : 'H'}</span>}
+                <p class="bubble">{text}</p>
+              </div>
+            ))}
+            <div class="bubble-row me"><span class="chat-avatar" aria-hidden="true">H</span><p class="bubble typing" aria-label="typing"><i></i><i></i><i></i></p></div>
+          </div>
+        </section>
+
+        <section class="sec v-d">
+          <div class="profile">
+            <div class="profile-photo">{portrait ? <Pic src={portrait} alt="Harshitha Upadhyayula" sizes="(min-width: 900px) 280px, 80vw" /> : <span class="monogram">HU</span>}<p class="profile-cap mono">Harshitha Upadhyayula, Bengaluru</p></div>
+            <blockquote class="profile-quote">{site.tagline}</blockquote>
+          </div>
+          <h3>In brief</h3>
+          <dl class="facts">{facts.map(([k, v]) => (<><dt>{k}</dt><dd>{v}</dd></>))}</dl>
+        </section>
+
+        <p class="actions"><a class="btn btn-primary" href="#cpu" data-open="cpu">See my work</a><a class="btn" href="#trackpad" data-open="trackpad">Say hi</a></p>
       </>
     )}
 
+    {/* ═════════════ CPU: experience (A timeline · B commit log · C datasheet) ═════════════ */}
     {room === 'experience' && (
       <>
-        <section class="sec">
+        <section class="sec v-a">
           <h3>Where I've worked</h3>
           <ol class="timeline-list">
             {experience.map(({ d, Content }) => (
@@ -91,214 +179,265 @@ const dark = isDark(color);
               </li>
             ))}
           </ol>
-          <p class="fine">{skills.education}</p>
-          <p class="actions">
-            {hasResume && <a class="btn btn-primary" href={L.resume} download>Download resume (PDF)</a>}
-            <a class="btn" href={L.linkedin} {...ext}>LinkedIn</a>
-            {L.github && <a class="btn" href={L.github} {...ext}>GitHub</a>}
-          </p>
         </section>
+
+        <section class="sec v-b">
+          <div class="gitlog mono">
+            <p class="gitlog-cmd"><span class="t-prompt">$</span> git log --career</p>
+            {experience.map(({ d, Content }) => (
+              <div class="commit">
+                <p class="commit-line"><span class="commit-hash">commit {hash(d.org + d.start)}</span>{isCurrent(d.end) && <span class="commit-ref">(HEAD → main)</span>}</p>
+                <p class="commit-meta">Date: {d.start} – {d.end}</p>
+                <p class="commit-subject">{d.role} @ {d.org}</p>
+                {d.team && <p class="commit-team">{d.team}</p>}
+                <div class="commit-body body"><Content /></div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section class="sec v-c">
+          <h3>Datasheet</h3>
+          <table class="datasheet">
+            <thead><tr><th>Period</th><th>Role</th><th>Unit</th></tr></thead>
+            <tbody>
+              {experience.map(({ d, Content }) => (
+                <>
+                  <tr class="ds-row"><td class="mono">{d.start}<br />{d.end}</td><td><strong>{d.role}</strong><br />{d.org}</td><td>{d.team ?? '—'}</td></tr>
+                  <tr class="ds-notes"><td></td><td colspan="2"><div class="body"><Content /></div></td></tr>
+                </>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
         <section class="sec">
-          <h3>What I work with</h3>
-          <dl class="skills">{skills.groups.map((g) => (<><dt>{g.title}</dt><dd>{g.items.join(', ')}</dd></>))}</dl>
+          <h3 class="v-a">What I work with</h3>
+          <h3 class="v-b">Dependencies</h3>
+          <h3 class="v-c">Pinout</h3>
+          <dl class="skills v-a">{skills.groups.map((g) => (<><dt>{g.title}</dt><dd>{g.items.join(', ')}</dd></>))}</dl>
+          <div class="deps v-b mono">{skills.groups.map((g) => (<p><span class="dep-group">"{g.title}"</span>: [{g.items.map((it, i) => <><span class="dep">"{it}"</span>{i < g.items.length - 1 ? ', ' : ''}</>)}]</p>))}</div>
+          <div class="pinout v-c">
+            {skills.groups.map((g, i) => (
+              <div class:list={['pin-group', `pin-${i}`]}><p class="pin-title mono">{g.title}</p><ul>{g.items.map((it) => <li>{it}</li>)}</ul></div>
+            ))}
+            <div class="pin-chip" aria-hidden="true"><span>HU-CORE</span></div>
+          </div>
         </section>
+
         <section class="sec">
-          <h3>Along the way</h3>
-          <ul class="wins">{skills.wins.map((w) => <li>{w}</li>)}</ul>
+          <h3 class="v-a">Along the way</h3>
+          <h3 class="v-b">Tags</h3>
+          <h3 class="v-c">Certifications &amp; benchmarks</h3>
+          <ul class="wins">{skills.wins.map((w, i) => <li><span class="win-tag mono">v{i + 1}.0</span>{w}</li>)}</ul>
         </section>
+        <p class="actions">
+          {hasResume && <a class="btn btn-primary" href={L.resume} download>Download resume (PDF)</a>}
+          <a class="btn" href={L.linkedin} {...ext}>LinkedIn</a>
+          {L.github && <a class="btn" href={L.github} {...ext}>GitHub</a>}
+        </p>
       </>
     )}
 
+    {/* ═════════════ SSD: projects, as a file explorer ═════════════ */}
     {room === 'projects' && (
       <section class="sec">
-        <h3>Saved to disk</h3>
-        <ul class="spec-list">
+        <div class="finder">
+          <div class="finder-bar"><i></i><i></i><i></i><span class="mono">projects</span></div>
+          <div class="finder-cols mono"><span>Name</span><span>Kind</span><span>Status</span></div>
           {projects.map(({ d, Content }) => (
-            <li>
-              <details>
-                <summary>
-                  <span class="spec-title">{d.title}</span>
-                  {d.status && <span class="tag">{d.status}</span>}
-                  <span class="spec-summary">{d.summary}</span>
-                  {d.stack.length > 0 && <span class="spec-stack mono">{d.stack.join(' / ')}</span>}
-                </summary>
-                <div class="body">
-                  <Content />
-                  {Object.entries(d.links).length > 0 && <p class="links">{Object.entries(d.links).map(([k, v]) => <a href={v as string} {...ext}>{k}</a>)}</p>}
-                </div>
-              </details>
-            </li>
+            <details class="finder-row">
+              <summary>
+                <span class="finder-name"><svg viewBox="0 0 20 16" aria-hidden="true"><path d="M1 3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" /></svg>{d.title}</span>
+                <span class="finder-kind mono">{d.stack[0] ?? 'folder'}</span>
+                <span class="finder-status mono">{d.status ?? 'shipped'}</span>
+              </summary>
+              <div class="finder-preview">
+                <p class="mono finder-file">README.md</p>
+                <p class="spec-summary">{d.summary}</p>
+                <div class="body"><Content /></div>
+                {d.stack.length > 0 && <p class="spec-stack mono">{d.stack.join(' · ')}</p>}
+                {Object.entries(d.links).length > 0 && <p class="links">{Object.entries(d.links).map(([k, v]) => <a href={v as string} {...ext}>{k}</a>)}</p>}
+              </div>
+            </details>
           ))}
-        </ul>
+        </div>
       </section>
     )}
 
+    {/* ═════════════ GPU: content, as a render queue ═════════════ */}
     {room === 'content' && (
-      <>
-        <section class="sec">
-          <h3>Latest</h3>
-          <ul class="spec-list">
-            {videos.map(({ d, Content }) => (
-              <li class="media-row">
-                <span class="tag">{d.platform}</span>
-                <a class:list={['spec-title', isTodo(d.title) && 'todo-inline']} href={d.url} {...ext}>{todoText(d.title)}</a>
-                <div class="body"><Content /></div>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section class="sec">
-          <h3>Follow along</h3>
-          <div class="follow-grid">
-            <a class="follow" href={L.linkedin} {...ext}>
-              <strong>LinkedIn</strong>
-              <span>Breakdowns of how systems work, in posts.</span>
-              <span class="btn btn-primary">Follow on LinkedIn</span>
-            </a>
-            {L.youtube ? (
-              <a class="follow" href={L.youtube} {...ext}><strong>YouTube</strong><span>Face-to-camera tech videos, and later, conversations.</span><span class="btn btn-primary">Subscribe</span></a>
-            ) : (
-              <div class="follow follow-soon"><strong>YouTube</strong><span>Face-to-camera tech videos, and later, podcasts with people who build things. Still rendering.</span><span class="btn" aria-disabled="true">Launching soon</span></div>
-            )}
-          </div>
-        </section>
-      </>
+      <section class="sec">
+        <h3>Render queue</h3>
+        <ol class="queue">
+          <li class="job done"><span class="job-state mono">rendered</span><a href={L.linkedin} {...ext}><strong>LinkedIn posts</strong></a><span class="job-desc">Breakdowns of how systems work, ongoing.</span></li>
+          {L.youtube
+            ? <li class="job done"><span class="job-state mono">rendered</span><a href={L.youtube} {...ext}><strong>YouTube channel</strong></a><span class="job-desc">Face-to-camera tech videos.</span></li>
+            : <li class="job running"><span class="job-state mono">rendering</span><strong>YouTube channel</strong><span class="job-desc">Face-to-camera tech videos.</span><span class="job-bar" aria-hidden="true"></span></li>}
+          <li class="job queued"><span class="job-state mono">queued</span><strong>Podcast</strong><span class="job-desc">Conversations with people who build things.</span></li>
+        </ol>
+        {videos.length > 0 && (
+          <>
+            <h3 class="sp-top">Latest output</h3>
+            <ul class="spec-list">
+              {videos.map(({ d, Content }) => (
+                <li class="media-row"><span class="tag">{d.platform}</span><a class:list={['spec-title', isTodo(d.title) && 'todo-inline']} href={d.url} {...ext}>{todoText(d.title)}</a><div class="body"><Content /></div></li>
+              ))}
+            </ul>
+          </>
+        )}
+        <p class="actions"><a class="btn btn-primary" href={L.linkedin} {...ext}>Follow on LinkedIn</a></p>
+      </section>
     )}
 
+    {/* ═════════════ SPEAKERS: dance (A reel · B count sheet · C now playing) ═════════════ */}
     {room === 'dance' && (
       <>
-        <section class="sec">
-          <h3>{videos.length > 1 ? 'Clips' : 'Clip'}</h3>
-          {videos.map(({ d }) => {
-            const frames = framesFor(d.src);
-            return (
-              <figure class="reel">
-                <Video src={d.src} poster={d.poster} label={todoText(d.title)} />
+        {videos.map(({ d }) => {
+          const frames = framesFor(d.src);
+          const title = todoText(d.title);
+          return (
+            <>
+              <section class="sec v-a">
+                <div class="reel-phone">
+                  <div class="reel-screen">
+                    <Video src={d.src} poster={d.poster} label={title} />
+                    <div class="reel-overlay">
+                      <p class="reel-user"><span class="reel-avatar" aria-hidden="true">H</span> harshitha · dance</p>
+                      <p class="reel-caption">{title}</p>
+                    </div>
+                    <div class="reel-side" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 5 6.4 5c2 0 3.4 1.1 4.1 2.3h3c.7-1.2 2.1-2.3 4.1-2.3C21 5 23.1 8.4 21.6 11.8 19.5 16.4 12 21 12 21z" /></svg>
+                      <svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z" /></svg>
+                      <svg viewBox="0 0 24 24"><path d="M21 4L10 14M21 4l-7 17-3-8-8-3z" /></svg>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="sec v-b">
+                <div class="count-video"><Video src={d.src} poster={d.poster} label={title} /></div>
                 {frames.length > 0 && (
-                  <div class="study" data-study aria-label="Motion study: frames from this clip. Drag across to scrub.">
-                    <img class="study-big" src={frames[0]} alt="" width="200" height="356" loading="lazy" />
-                    <div class="study-strip" role="slider" tabindex="0" aria-label="Scrub frames" aria-valuemin="1" aria-valuemax={frames.length} aria-valuenow="1">
+                  <div class="countsheet" data-study>
+                    <p class="cs-head mono"><span>{title}</span><span>8-count</span></p>
+                    <img class="study-big cs-big" src={frames[0]} alt="" width="200" height="356" loading="lazy" />
+                    <div class="study-strip cs-strip" role="slider" tabindex="0" aria-label="Scrub through the eight counts" aria-valuemin="1" aria-valuemax={frames.length} aria-valuenow="1">
                       {frames.map((f: string, k: number) => <img src={f} alt="" width="40" height="71" loading="lazy" data-k={k} />)}
                     </div>
-                    <p class="scribble">motion study: {frames.length} frames. Drag across them.</p>
+                    <div class="cs-counts mono" aria-hidden="true">{COUNTS.slice(0, frames.length).map((c) => <span>{c}</span>)}</div>
+                    <p class="scribble cs-note">break the move down, learn it slowly, put it back together at speed. Drag across the counts.</p>
                   </div>
                 )}
-                <figcaption class:list={[isTodo(d.title) && 'todo-inline']}>{todoText(d.title)}</figcaption>
-              </figure>
-            );
-          })}
-        </section>
+              </section>
+
+              <section class="sec v-c">
+                <div class="np" data-np>
+                  <div class="np-art"><Video src={d.src} poster={d.poster} label={title} /></div>
+                  <div class="np-info">
+                    <p class="mono np-label">now playing</p>
+                    <p class="np-title">{title}</p>
+                    <p class="np-artist">Harshitha · dance</p>
+                    <div class="np-bar" aria-hidden="true"><span class="np-fill"></span></div>
+                    <p class="np-times mono" aria-hidden="true"><span class="np-cur">0:00</span><span class="np-dur">0:06</span></p>
+                    <div class="np-controls">
+                      <button type="button" class="np-btn" data-np-restart aria-label="Restart clip"><svg viewBox="0 0 24 24"><path d="M6 5v14M19 5L9 12l10 7z" /></svg></button>
+                      <button type="button" class="np-btn np-play" data-np-play aria-label="Play or pause"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z" /></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z" /></svg></button>
+                    </div>
+                  </div>
+                  {frames.length > 0 && (
+                    <div class="np-chapters">
+                      <p class="mono np-label">chapters</p>
+                      <div class="np-frames">{frames.map((f: string, k: number) => <button type="button" class="np-frame" data-np-seek={k} aria-label={`Jump to part ${k + 1}`}><img src={f} alt="" width="40" height="71" loading="lazy" /></button>)}</div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
+          );
+        })}
         <section class="sec">
           {L.instagram ? <a class="btn btn-primary" href={L.instagram} {...ext}>Follow the dance on Instagram</a> : <p class="scribble aside">more clips on Instagram soon.</p>}
         </section>
       </>
     )}
 
+    {/* ═════════════ RAM: memories, as polaroids ═════════════ */}
     {room === 'memories' && (
       <>
         <section class="sec">
           <h3>Cached frames</h3>
           <div class="photos" data-count={photos.photos.length}>
-            {photos.photos.map((ph) => (
-              <figure class="polaroid">
-                <picture>
-                  <source type="image/avif" srcset={`${ph.src}-480.avif 480w, ${ph.src}-960.avif 960w`} sizes="(min-width: 900px) 300px, 45vw" />
-                  <source type="image/webp" srcset={`${ph.src}-480.webp 480w, ${ph.src}-960.webp 960w`} sizes="(min-width: 900px) 300px, 45vw" />
-                  <img src={`${ph.src}-480.jpg`} alt={ph.alt} width="480" height="640" loading="lazy" decoding="async" />
-                </picture>
-                <figcaption class:list={['scribble', isTodo(ph.caption) && 'todo-inline']}>{todoText(ph.caption)}</figcaption>
-              </figure>
-            ))}
+            {photos.photos.map((ph) => (<figure class="polaroid"><Pic src={ph.src} alt={ph.alt} /><figcaption class="scribble">{todoText(ph.caption)}</figcaption></figure>))}
           </div>
         </section>
         <section class="sec">
           <h3>On rotation</h3>
-          <dl class="skills">
-            {photos.rotation.map((r) => (<><dt>{r.label}</dt><dd>{r.value}</dd></>))}
-          </dl>
-          <p class="scribble aside">psst: the stickers on the lid are clickable too.</p>
+          <dl class="skills">{photos.rotation.map((r) => (<><dt>{r.label}</dt><dd>{r.value}</dd></>))}</dl>
         </section>
+        <p class="scribble aside">psst: the stickers on the lid are clickable too.</p>
       </>
     )}
 
+    {/* ═════════════ BATTERY: books + motivation, as pull quotes ═════════════ */}
     {room === 'battery' && (
+      <section class="sec">
+        {charged.map(({ d, Content }) => (
+          <blockquote class="pull"><div class="pull-text"><Content /></div><footer><span class="pull-src">{todoText(d.title)}</span>{d.authors && <span class="mono"> · {todoText(d.authors)}</span>}</footer></blockquote>
+        ))}
+      </section>
+    )}
+
+    {/* ═════════════ KEYBOARD: papers + research, typewritten ═════════════ */}
+    {room === 'research' && (
       <>
         <section class="sec">
-          <h3>Books</h3>
-          {books.map(({ d, Content }) => (
-            <article class="note">
-              <h4 class:list={[isTodo(d.title) && 'todo-inline']}>{todoText(d.title)}</h4>
+          <h3>Typed by me</h3>
+          {mine.map(({ d, Content }) => (
+            <article class="paper"><p class="kind mono">my research</p><h4>{d.title}</h4>{d.authors && <p class="meta">{todoText(d.authors)}</p>}<div class="body"><Content /></div></article>
+          ))}
+        </section>
+        <section class="sec">
+          <h3>Notes from the margins</h3>
+          {papers.map(({ d, Content }) => (
+            <article class="paper">
+              <p class="kind mono">{d.year ? `paper · ${d.year}` : 'paper'}</p>
+              <h4 class:list={[isTodo(d.title) && 'todo-inline']}>{d.link ? <a href={d.link} {...ext}>{todoText(d.title)}</a> : todoText(d.title)}</h4>
               {d.authors && <p class="meta">{todoText(d.authors)}</p>}
               <div class="body"><Content /></div>
             </article>
           ))}
         </section>
-        <section class="sec">
-          <h3>What keeps me going</h3>
-          {sources.map(({ d, Content }) => (
-            <article class="note">
-              <h4 class:list={[isTodo(d.title) && 'todo-inline']}>{todoText(d.title)}</h4>
-              <div class="body"><Content /></div>
-            </article>
-          ))}
-        </section>
       </>
     )}
 
-    {room === 'research' && (
-      <>
-        <section class="sec">
-          <h3>My research</h3>
-          {mine.map(({ d, Content }) => (
-            <article class="note">
-              <h4>{d.title}</h4>
-              {d.authors && <p class:list={['meta mono', isTodo(d.authors) && 'todo-inline']}>{todoText(d.authors)}</p>}
-              <div class="body"><Content /></div>
-            </article>
-          ))}
-        </section>
-        <section class="sec">
-          <h3>Papers I've read</h3>
-          <p class="scribble aside">my takeaways, not summaries. Argue with me.</p>
-          {papers.map(({ d, Content }) => (
-            <article class="note">
-              {d.read && <p class="kind mono">read {d.read}</p>}
-              <h4 class:list={[isTodo(d.title) && 'todo-inline']}>{d.link ? <a href={d.link} {...ext}>{todoText(d.title)}</a> : todoText(d.title)}</h4>
-              {d.authors && <p class="meta">{todoText(d.authors)}{d.year && `, ${d.year}`}</p>}
-              <div class="body"><Content /></div>
-            </article>
-          ))}
-        </section>
-      </>
-    )}
-
+    {/* ═════════════ WI-FI: events, as tickets ═════════════ */}
     {room === 'events' && (
       <section class="sec">
-        <h3>Rooms I've helped fill</h3>
-        <ol class="timeline-list">
-          {events.map(({ d, Content }) => (
-            <li>
-              <p class="what"><strong>{d.title}</strong></p>
-              <p class="team">{d.role}{d.when && !isTodo(d.when) && `, ${d.when}`}</p>
-              <div class="body"><Content /></div>
-            </li>
+        <div class="tickets">
+          {events.map(({ d, Content }, i) => (
+            <article class="ticket">
+              <div class="ticket-main"><p class="mono ticket-org">{d.org ?? 'event'}</p><h4>{d.title}</h4><p class="ticket-role">{d.role}</p><div class="body"><Content /></div></div>
+              <div class="ticket-stub mono" aria-hidden="true"><span>admit one</span><b>No. {String(i + 1).padStart(3, '0')}</b></div>
+            </article>
           ))}
-        </ol>
+        </div>
       </section>
     )}
 
+    {/* ═════════════ TRACKPAD: contact, as a command bar ═════════════ */}
     {room === 'contact' && (
-      <section class="sec contact">
-        <h3>Reach me</h3>
-        <ul class="contact-list">
-          <li><a class="contact-link" href={L.linkedin} {...ext}><span>LinkedIn</span><span class="mono">/in/harshitha-upadhyayula</span></a></li>
-          {L.github && <li><a class="contact-link" href={L.github} {...ext}><span>GitHub</span><span class="mono">U-Harshitha</span></a></li>}
-          {L.email && <li><a class="contact-link" href={`mailto:${L.email}`}><span>Email</span><span class="mono">{L.email}</span></a></li>}
-          {L.instagram && <li><a class="contact-link" href={L.instagram} {...ext}><span>Instagram</span><span class="mono">dance</span></a></li>}
-          {hasResume && <li><a class="contact-link" href={L.resume} download><span>Resume</span><span class="mono">PDF</span></a></li>}
-        </ul>
-        <p class="scribble aside">stickers on the lid: {stickers.stickers.length}. Collect them all.</p>
-      </section>
+      <>
+        <section class="sec">
+          <div class="cmdk">
+            <div class="cmdk-input"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6" /><path d="M14 14l4 4" /></svg><span>Reach Harshitha…</span><kbd class="mono">⌘K</kbd></div>
+            <p class="cmdk-group mono">actions</p>
+            {contacts.map((c) => (
+              <a class="cmdk-row" href={c.href} {...(c.ext ? ext : {})} download={c.download ? '' : undefined}><span class="cmdk-icon mono" aria-hidden="true">{c.key}</span><span class="cmdk-label">Open {c.label}</span><span class="cmdk-detail mono">{c.detail}</span><kbd class="mono">↵</kbd></a>
+            ))}
+          </div>
+        </section>
+        <p class="scribble aside">there are 8 stickers on the lid. Collect them all.</p>
+      </>
     )}
   </div>
 

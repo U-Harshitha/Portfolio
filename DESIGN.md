@@ -2,6 +2,37 @@
 
 Decisions and why. Newest version first.
 
+## v2.4: a high-tech laptop, and the first picks locked in
+
+**Locked in** (`final: true` in their part files; the other designs were deleted): SSD = file explorer + "Things I built"; RAM = polaroids + "Cached moments"; Battery = pull quotes + "Fully charged by"; Keyboard = typewriter + "Typed notes"; Wi-Fi = tickets + "Connected rooms"; GPU = render queue + "On air".
+**Still choosing**: CPU (timeline / commit log / datasheet), Screen (letter / boot log / chat / profile), Speakers (three new designs: reel / count sheet / now playing), Trackpad name (command bar design kept; 7 name options).
+
+**Laptop realism**
+- Keyboard: a real laptop layout (half-height function row, 1.5u–2.25u modifiers, 5u space, stacked ↑↓, power key), dark matte keycaps with a dished centre, backlit legends (emissive), and a per-key underglow drifting through the part colours. Polished diamond-cut edges on the deck and trackpad, a front status light.
+- Screen: thinner bezel, camera notch, glass layer, and a **live display** redrawn ~12×/s: boot screen, an editor that types itself, live CPU / network graphs, a clock, and the rebuild progress. Its light spills onto the keys. Backlit HU logo on the lid.
+- Case: chrome hinge caps, cooling vents along the back.
+- Motion: power-on intro (lid opens with a soft settle, the screen flickers on, boots, then the backlight sweeps left to right). Keys peel off column by column into a floating sheet with a ripple. All easing is frame-rate independent.
+
+## v2.3: three designs and three names per part (pick mode)
+
+- **Fixes**: the page no longer scrolls behind an open part (scroll is locked, hero text hidden). The showcased part is drawn in a second render pass on its own layer, after the tinted backdrop, so the laptop can never show through it. Hover states no longer move elements (moving buttons out from under the cursor caused the flicker); they change shadow/colour instead.
+- **Pick mode** (`preview: true` in `content/site.config.ts`): every panel has a bar to switch between three designs (A/B/C) and three names (1/2/3), remembered per browser. "Copy my picks" copies one line per part.
+
+| Part | A | B | C | Names |
+|---|---|---|---|---|
+| Screen | Terminal | ID badge | Letter | Hello, this is me / Boot screen / whoami |
+| CPU | Timeline | Commit log | Datasheet + pinout | Work experience / The engine room / Where I've shipped |
+| SSD | Cards | File explorer | Terminal tree | Things I built / Saved to disk / Projects, unzipped |
+| GPU | Channels | On air | Render queue | Tech content / Now rendering / On air |
+| Speakers | Studio | Stage | Equalizer | Dance / Turn it up / In motion |
+| RAM | Polaroids | Memory map | Scrapbook | Memories / Cached moments / Off the clock |
+| Battery | Cells | Bookshelf | Pull quotes | What keeps me charged / Power sources / Fully charged by |
+| Keyboard | Notes | Paper | Typewriter | Papers & research / Typed notes / Reading, annotated |
+| Wi-Fi | Timeline | Tickets | Network | Events / Connected rooms / Signal boosts |
+| Trackpad | Cards | Command bar | Business card | Get in touch / Say hi / Tap to connect |
+
+To lock in a choice: set `design:` (a/b/c) and `name:` (1/2/3) in each `content/parts/*.md`, then `preview: false`. Unused designs can then be deleted from `Room.astro` and `rooms.css`.
+
 ## v2.2: open a part, it clicks back in
 
 **Asked for:** drop the three visitor types (lenses), keep three cursors but only once the laptop is apart, more realism (reference: BuildCores' 3D product renders), a better moment when a part opens, and each part going back into the computer as you look at it.

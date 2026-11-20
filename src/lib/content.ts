@@ -23,7 +23,9 @@ export async function loadAll() {
   const ids = site.partsOrder.filter((id) => partsAll.some((p) => p.id === id));
   const parts = ids.map((id) => {
     const p = partsAll.find((x) => x.id === id)!;
-    return { id, entry: p, ...p.data };
+    // the live name (picked from `names`) is what labels and chips show
+    const live = (p.data.names ?? [])[(p.data.name ?? 1) - 1] ?? p.data.aspect;
+    return { id, entry: p, ...p.data, aspect: live };
   });
 
   return {

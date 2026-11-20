@@ -12,6 +12,10 @@ const parts = defineCollection({
     color: z.string(), // the room's colour
     room: z.enum(['intro', 'experience', 'projects', 'content', 'memories', 'dance', 'battery', 'research', 'events', 'contact']),
     joke: z.string(), // the comic note scribbled next to the part
+    names: z.array(z.string()).default([]), // title options; `name` picks the live one (1-3)
+    name: z.number().default(1),
+    design: z.enum(['a', 'b', 'c', 'd', 'e', 'f']).default('a'), // which panel design is live
+    final: z.boolean().default(false), // true = design and name are chosen; hides the preview picker
   }),
 });
 

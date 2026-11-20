@@ -18,6 +18,10 @@ const site = {
     updated: '2026-11',
   },
 
+  // While true, every part's panel shows a small bar to preview its three designs and three names.
+  // Pick your favourites, set `design` and `name` in each content/parts/*.md, then set this to false.
+  preview: true,
+
   // Light or dark when a visitor has no saved preference: 'system' | 'light' | 'dark'
   defaultTheme: 'light' as 'system' | 'light' | 'dark',
 
