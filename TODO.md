@@ -18,13 +18,6 @@ Placeholders are now filled so the site looks finished. Facts come from your res
 - [ ] **Code on the laptop screen** (`CODE` and `makeScreen()` in `src/scripts/laptop.ts`) and the fun specs on component labels ("HU-CORE 4.2GHz", "SSD 1TB", "72Wh").
 - [ ] Dance clip title "Group session, November 2026" (`content/videos/dance-01.md`).
 
-## Design picks still open
-- [ ] **CPU**: timeline / commit log / datasheet, and a name.
-- [ ] **Screen**: letter / boot log / chat / profile (name "whoami" picked).
-- [ ] **Speakers**: reel / count sheet / now playing (three new ones).
-- [ ] **Trackpad**: name, from 7 options (command bar design kept).
-Open any of these on the site, use the bar at the top of the panel, then **copy my picks**.
-
 ## Still missing
 - [ ] **A photo of you.** `PersonalDetails/Pictures/` only has the Google Cloud office-wall photo (no person in it). Drop your photo there, run `npm run media`, and set `portrait` in `content/photos.json`. The screen room shows an "HU" monogram until then.
 - [ ] **Second dance video.** `PersonalDetails/Dance Video/` has one .mp4 and one .jpeg (cupcakes). Drop the second clip in and run `npm run media`; it appears in the Dance room automatically.

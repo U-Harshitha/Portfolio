@@ -18,16 +18,20 @@ const site = {
     updated: '2026-11',
   },
 
-  // While true, every part's panel shows a small bar to preview its three designs and three names.
-  // Pick your favourites, set `design` and `name` in each content/parts/*.md, then set this to false.
-  preview: true,
-
   // Light or dark when a visitor has no saved preference: 'system' | 'light' | 'dark'
   defaultTheme: 'light' as 'system' | 'light' | 'dark',
 
-  // The order parts are listed in, and the order the "next part" button follows.
+  // The order parts are numbered in, and the order the "Next component" button follows.
   // Ids match the file names in content/parts/. Remove one to hide that room.
-  partsOrder: ['screen', 'cpu', 'ssd', 'gpu', 'speakers', 'ram', 'battery', 'keyboard', 'wifi', 'trackpad'],
+  partsOrder: ['screen', 'ram', 'speakers', 'cpu', 'ssd', 'keyboard', 'gpu', 'wifi', 'battery', 'trackpad'],
+
+  // How the index under the laptop groups the parts. A part left out of every group lands in a last "More" group.
+  indexGroups: [
+    { title: 'Who I am', note: 'A hello, the moments I keep, and dance.', parts: ['screen', 'ram', 'speakers'] },
+    { title: 'What I build', note: 'Where I have worked, what I have made, and the research behind it.', parts: ['cpu', 'ssd', 'keyboard'] },
+    { title: 'What I share', note: 'Videos and writing, the rooms I bring people into, and what I read.', parts: ['gpu', 'wifi', 'battery'] },
+    { title: 'Say hello', note: 'The quickest way in.', parts: ['trackpad'] },
+  ],
 
   links: {
     linkedin: 'https://www.linkedin.com/in/harshitha-upadhyayula',

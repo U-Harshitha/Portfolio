@@ -1,0 +1,51 @@
+---
+// The closing block: one line of intent, where to find me, and how the site was made.
+import site from '../../content/site.config';
+import { hasResume } from '../lib/content';
+
+const { version } = Astro.props as { version: string };
+const L = site.links as Record<string, string>;
+const ext = { target: '_blank', rel: 'noopener' };
+const elsewhere = [
+  ['LinkedIn', L.linkedin],
+  ['GitHub', L.github],
+  ['Instagram', L.instagram],
+  ['YouTube', L.youtube],
+  ['Email', L.email && `mailto:${L.email}`],
+].filter(([, href]) => href) as [string, string][];
+---
+<footer class="site-foot" data-x="SiteFoot.astro">
+  <div class="foot-cta">
+    <p class="eyebrow mono">Open a connection</p>
+    <p class="foot-big">Let's build <em>something.</em></p>
+    <p class="foot-sub">Networking by day, everything else after hours. LinkedIn is the best place to reach me for now.</p>
+    <p class="actions">
+      <a class="btn btn-primary" href="#trackpad" data-open="trackpad">Ping me</a>
+      {hasResume && <a class="btn" href={L.resume} download>Resume</a>}
+    </p>
+  </div>
+
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h mono">Elsewhere</p>
+      <ul class="foot-links">{elsewhere.map(([label, href]) => <li><a href={href} {...(href.startsWith('mailto') ? {} : ext)}>{label}<span aria-hidden="true">↗</span></a></li>)}</ul>
+    </div>
+    <div>
+      <p class="foot-h mono">Local time</p>
+      <p class="foot-clock"><time data-clock>--:--</time> <span>in Bengaluru</span></p>
+      <p class="foot-note">IST, UTC+5:30</p>
+    </div>
+    <div>
+      <p class="foot-h mono">Colophon</p>
+      <p class="foot-note">The laptop is modelled in code with three.js, no model files. Built with Astro, hosted on Vercel. Set in Bricolage Grotesque, Instrument Sans, Instrument Serif and JetBrains Mono.</p>
+    </div>
+  </div>
+
+  <p class="foot-mark" aria-hidden="true">Harshitha<em>.</em></p>
+
+  <div class="foot-base mono">
+    <span>© {new Date().getFullYear()} {site.name}</span>
+    <a href="#changelog" data-open="changelog">Changelog {version}</a>
+    <a href="#top" data-top>Back to top ↑</a>
+  </div>
+</footer>

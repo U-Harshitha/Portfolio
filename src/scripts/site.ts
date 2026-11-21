@@ -276,68 +276,6 @@ const endDrag = () => { dragX = null; stage.classList.remove('dragging'); };
 stage.addEventListener('pointerup', endDrag);
 stage.addEventListener('pointercancel', endDrag);
 
-/* ───────────── design preview picker (only while site.preview is on) ───────────── */
-function applyPick(page: HTMLElement, v: string, n: number) {
-  const names = JSON.parse(page.dataset.names || '[]') as string[];
-  page.dataset.variant = v;
-  const title = $('.room-title', page);
-  if (title && names[n]) title.textContent = names[n];
-  $$<HTMLButtonElement>('.picker [data-v]', page).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
-  $$<HTMLButtonElement>('.picker [data-n]', page).forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.n) === n)));
-  store.set(`pick:${page.id}`, `${v}${n + 1}`);
-}
-const currentName = (page: HTMLElement) => Number($('.picker [data-n][aria-pressed="true"]', page)?.dataset.n ?? 0);
-$$('.room-page').forEach((page) => {
-  if (!$('.picker', page)) return;
-  const saved = store.get(`pick:${page.id}`);
-  const m = saved?.match(/^([a-f])(\d+)$/);
-  if (m) applyPick(page, m[1], Number(m[2]) - 1);
-});
-document.addEventListener('click', async (e) => {
-  const b = (e.target as Element).closest<HTMLButtonElement>('.picker button');
-  if (!b) return;
-  const page = b.closest<HTMLElement>('.room-page')!;
-  if (b.dataset.v) applyPick(page, b.dataset.v, currentName(page));
-  else if (b.dataset.n) applyPick(page, page.dataset.variant || 'a', Number(b.dataset.n));
-  else if ('copyPicks' in b.dataset) {
-    const picks = $$('.room-page')
-      .filter((p) => $('.picker', p))
-      .map((p) => {
-        const designs = JSON.parse(p.dataset.designs || '[]') as string[];
-        const names = JSON.parse(p.dataset.names || '[]') as string[];
-        const v = p.dataset.variant || 'a', n = currentName(p);
-        const d = designs.length > 1 ? `${v.toUpperCase()} ${designs['abcdef'.indexOf(v)] ?? ''} + ` : '';
-        return `${p.id}: ${d}"${names[n] ?? ''}"`;
-      })
-      .join('\n');
-    try { await navigator.clipboard.writeText(picks); b.textContent = 'copied!'; } catch { b.textContent = 'copy failed'; }
-    b.classList.add('copied');
-    setTimeout(() => { b.textContent = 'copy my picks'; b.classList.remove('copied'); }, 1600);
-  }
-});
-
-/* ───────────── "now playing" dance player ───────────── */
-$$('[data-np]').forEach((np) => {
-  const v = $<HTMLVideoElement>('video', np)!;
-  const fill = $('.np-fill', np)!, cur = $('.np-cur', np)!, dur = $('.np-dur', np)!;
-  const frames = $$('[data-np-seek]', np).length || 1;
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  const sync = () => {
-    np.classList.toggle('is-playing', !v.paused);
-    if (v.duration) { fill.style.width = `${(v.currentTime / v.duration) * 100}%`; dur.textContent = fmt(v.duration); }
-    cur.textContent = fmt(v.currentTime || 0);
-  };
-  const play = () => v.play().catch(() => {});
-  ['play', 'pause', 'timeupdate', 'loadedmetadata'].forEach((ev) => v.addEventListener(ev, sync));
-  $('[data-np-play]', np)!.addEventListener('click', () => (v.paused ? play() : v.pause()));
-  $('[data-np-restart]', np)!.addEventListener('click', () => { v.currentTime = 0; play(); });
-  $$('[data-np-seek]', np).forEach((b) => b.addEventListener('click', async () => {
-    if (!v.duration) await play();
-    v.currentTime = (Number(b.dataset.npSeek) / frames) * (v.duration || 6);
-    play();
-  }));
-});
-
 /* ───────────── media inside rooms ───────────── */
 $$('[data-video]').forEach((box) => {
   const v = $<HTMLVideoElement>('video', box)!;
@@ -347,27 +285,12 @@ $$('[data-video]').forEach((box) => {
   v.addEventListener('play', sync); v.addEventListener('pause', sync);
 });
 
-$$('[data-study]').forEach((study) => {
-  const big = $<HTMLImageElement>('.study-big', study)!;
-  const strip = $('.study-strip', study)!;
-  const imgs = $$<HTMLImageElement>('img', strip);
-  if (!imgs.length) return;
-  let k = 0;
-  const show = (i: number) => {
-    k = Math.max(0, Math.min(imgs.length - 1, i));
-    big.src = imgs[k].src;
-    imgs.forEach((im, j) => im.classList.toggle('on', j === k));
-    strip.setAttribute('aria-valuenow', String(k + 1));
-  };
-  const fromPointer = (e: PointerEvent) => {
-    const r = strip.getBoundingClientRect();
-    show(Math.floor(((e.clientX - r.left) / r.width) * imgs.length));
-  };
-  strip.addEventListener('pointermove', fromPointer);
-  strip.addEventListener('pointerdown', (e) => { strip.setPointerCapture(e.pointerId); fromPointer(e); });
-  strip.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') { e.preventDefault(); show(k + 1); }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); show(k - 1); }
-  });
-  show(0);
-});
+/* ───────────── footer: Bengaluru local time, back to top ───────────── */
+const clock = $('[data-clock]');
+if (clock) {
+  const fmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  const tick = () => { clock.textContent = fmt.format(new Date()); };
+  tick(); setInterval(tick, 15000);
+}
+$('[data-top]')?.addEventListener('click', (e) => { e.preventDefault(); scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' }); });
+

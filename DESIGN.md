@@ -2,6 +2,16 @@
 
 Decisions and why. Newest version first.
 
+## v2.5: every panel final, a quieter finish
+
+**Locked in**: Screen = profile card (portrait/monogram + facts) then a short chat, "whoami"; CPU = git log + dependencies + tags, "Work experience"; Speakers = reels, "Dance"; Trackpad = command bar, "Ping me". The panel pickers, "copy my picks" and every unused design (letter, boot log, profile, timeline, datasheet, count sheet, now playing) are gone.
+
+**Index** (`PartsIndex.astro`): the old colour chips became an editorial contents page (picked over a spec sheet and a schematic). Parts sit in four groups, set by `indexGroups` in site.config: I. Who I am (screen, RAM, speakers), II. What I build (CPU, SSD, keyboard), III. What I share (GPU, Wi-Fi, battery), IV. Say hello (trackpad, one wide filled card). `partsOrder` follows the groups, so the numbers run 01 to 10 and Next component walks the same path.
+
+**Footer** (`SiteFoot.astro`): "Let's build something.", links, live Bengaluru time, a colophon, and an outlined wordmark that fills with the part colours on hover.
+
+**Tone**: handwriting (Kalam) now only lives in the sticker art on the lid. Notes and asides use Instrument Serif italic; labels read "Select a component", "Next component", "Stickers · tap to read".
+
 ## v2.4: a high-tech laptop, and the first picks locked in
 
 **Locked in** (`final: true` in their part files; the other designs were deleted): SSD = file explorer + "Things I built"; RAM = polaroids + "Cached moments"; Battery = pull quotes + "Fully charged by"; Keyboard = typewriter + "Typed notes"; Wi-Fi = tickets + "Connected rooms"; GPU = render queue + "On air".

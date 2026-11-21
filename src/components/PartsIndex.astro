@@ -1,0 +1,68 @@
+---
+// The index below the laptop, set like a magazine contents page.
+// Parts are numbered in `partsOrder` and grouped by `indexGroups` (both in content/site.config.ts).
+import site from '../../content/site.config';
+import { isDark } from '../lib/content';
+
+const { parts } = Astro.props as { parts: any[] };
+
+// What each part is, in hardware terms, and what it holds.
+const SPEC: Record<string, [string, string]> = {
+  screen: ['Display', 'Who I am, in one window'],
+  cpu: ['Processor', 'Roles, teams and what shipped'],
+  ssd: ['Storage', 'Projects I built and kept'],
+  gpu: ['Graphics', 'Tech videos and writing'],
+  speakers: ['Audio', 'Dance, on repeat'],
+  ram: ['Memory', 'Photos and what is on rotation'],
+  battery: ['Power', 'Books and ideas that keep me going'],
+  keyboard: ['Input', 'Papers I wrote and papers I read'],
+  wifi: ['Wireless', 'Events and communities'],
+  trackpad: ['Touch', 'Every way to reach me'],
+};
+const rows = parts.map((p, i) => ({
+  id: p.id, title: p.title, name: p.aspect, color: p.color, n: String(i + 1).padStart(2, '0'),
+  kind: SPEC[p.id]?.[0] ?? p.title, holds: SPEC[p.id]?.[1] ?? '', dark: isDark(p.color),
+}));
+const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+const grouped = new Set(site.indexGroups.flatMap((g) => g.parts));
+const groups = [
+  ...site.indexGroups.map((g) => ({ ...g, items: g.parts.map((id) => byId[id]).filter(Boolean) })),
+  { title: 'More', note: '', items: rows.filter((r) => !grouped.has(r.id)) },
+].filter((g) => g.items.length);
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+---
+<section class="index" id="parts" aria-labelledby="parts-title" data-x="PartsIndex.astro · site.config.ts → partsOrder, indexGroups">
+  <header class="ix-head">
+    <p class="eyebrow mono">Contents · {rows.length} components</p>
+    <h2 id="parts-title" class="ix-title">Ten components. <em>One person.</em></h2>
+    <p class="ix-sub">Every part of the laptop opens onto a different side of my work and life. Take it apart above, or go straight to one here.</p>
+  </header>
+
+  <div class="ix-groups">
+    {groups.map((g, gi) => (
+      <section class:list={['ix-group', g.items.length === 1 && 'is-single']} aria-labelledby={`ix-g${gi}`}>
+        <header class="ix-group-head">
+          <span class="ix-roman" aria-hidden="true">{ROMAN[gi] ?? gi + 1}.</span>
+          <h3 id={`ix-g${gi}`} class="ix-group-title">{g.title}</h3>
+          {g.note && <p class="ix-group-note">{g.note}</p>}
+          <p class="ix-group-count mono">{g.items[0].n}{g.items.length > 1 && `–${g.items[g.items.length - 1].n}`}</p>
+        </header>
+        <ol class="edit">
+          {g.items.map((r) => (
+            <li style={`--c:${r.color}`}>
+              <a class="edit-card" href={`#${r.id}`} data-open={r.id} data-part={r.id} data-dark={r.dark ? 'true' : 'false'}>
+                <span class="edit-n">{r.n}</span>
+                <span class="edit-text">
+                  <span class="edit-kind mono">{r.kind} · {r.title}</span>
+                  <span class="edit-name">{r.name}</span>
+                  <span class="edit-holds">{r.holds}</span>
+                </span>
+                <span class="edit-go" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 12L12 4M6 4h6v6" /></svg></span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+  </div>
+</section>
