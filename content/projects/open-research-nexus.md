@@ -1,6 +1,6 @@
 ---
 title: Open Research Nexus
-stack: [React, Firebase, Flask, Gemini]
+stack: [React, Firebase, Flask, Groq, OpenAlex]
 summary: An open home for research. Draft papers together, share the data and methods behind them, and let others build on the work, the way open source builds on code.
 links:
   Open it: /research
