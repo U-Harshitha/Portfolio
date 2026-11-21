@@ -1,5 +1,7 @@
 // The laptop: a procedural three.js model that tears down into its parts.
-// Built entirely from code (rounded boxes + canvas textures), so there are no model files to load.
+// Built entirely from code (extruded rounded slabs + canvas textures), so there are no model files to load.
+// Proportions and finishes follow a modern unibody aluminium notebook: rounded plan corners, a thin base,
+// near-flush black keys in a recessed well, a large glass trackpad, a bead-blasted (not brushed) shell.
 // Scroll progress (0 = assembled, 1 = torn down) drives every part's pose; torn-down parts float.
 // Opening a part flies it to a showcase in front of the camera; closing it snaps it back INTO
 // the laptop, so visiting every part rebuilds the machine.
@@ -8,7 +10,7 @@ import {
   Euler, Group, HemisphereLight, InstancedMesh, MathUtils, Matrix4, Mesh, MeshBasicMaterial, MeshDepthMaterial,
   MeshPhysicalMaterial, NeutralToneMapping, Object3D, PointLight, AdditiveBlending, OrthographicCamera, PCFSoftShadowMap, PerspectiveCamera,
   PlaneGeometry, PMREMGenerator, Quaternion, Raycaster, RepeatWrapping, Scene, ShaderMaterial, SRGBColorSpace, Texture,
-  TubeGeometry, Vector2, Vector3, WebGLRenderer, WebGLRenderTarget,
+  TubeGeometry, Vector2, Vector3, WebGLRenderer, WebGLRenderTarget, ExtrudeGeometry, Shape, Path,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader.js';
@@ -61,22 +63,41 @@ const mat = (color: string, o: MatOpts = {}) => {
   m.envMapIntensity = o.env ?? 0.6;
   return m;
 };
-// fine horizontal streaks, like brushed aluminium
-let brushedTex: Texture | null = null;
-function brushed() {
-  if (brushedTex) return brushedTex;
+// bead-blasted aluminium: a fine, even grain in the roughness (no streaks)
+let blastTex: Texture | null = null;
+function blasted() {
+  if (blastTex) return blastTex;
   const c = document.createElement('canvas');
-  c.width = 512; c.height = 512;
+  c.width = 256; c.height = 256;
   const g = c.getContext('2d')!;
-  g.fillStyle = 'rgb(150,150,150)'; g.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 2600; i++) {
-    const y = rand(i) * 512, l = 40 + rand(i + 1) * 260, x = rand(i + 2) * 512, s = 120 + rand(i + 3) * 70;
-    g.fillStyle = `rgba(${s},${s},${s},0.35)`; g.fillRect(x, y, l, 1);
-  }
-  brushedTex = new CanvasTexture(c);
-  brushedTex.wrapS = brushedTex.wrapT = RepeatWrapping;
-  brushedTex.repeat.set(2, 2);
-  return brushedTex;
+  const img = g.createImageData(256, 256);
+  for (let i = 0; i < 256 * 256; i++) { const v = 150 + (rand(i * 0.731) - 0.5) * 34; img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v; img.data[i * 4 + 3] = 255; }
+  g.putImageData(img, 0, 0);
+  blastTex = new CanvasTexture(c);
+  blastTex.wrapS = blastTex.wrapT = RepeatWrapping;
+  blastTex.repeat.set(3, 3);
+  return blastTex;
+}
+// a rounded rectangle in the XZ plan, as a Shape (or a Path, for holes)
+function rrect<T extends Path>(p: T, w: number, d: number, r: number): T {
+  const x = -w / 2, y = -d / 2;
+  r = Math.min(r, w / 2, d / 2);
+  p.moveTo(x + r, y); p.lineTo(x + w - r, y); p.quadraticCurveTo(x + w, y, x + w, y + r);
+  p.lineTo(x + w, y + d - r); p.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+  p.lineTo(x + r, y + d); p.quadraticCurveTo(x, y + d, x, y + d - r);
+  p.lineTo(x, y + r); p.quadraticCurveTo(x, y, x + r, y);
+  return p;
+}
+// A slab with rounded plan corners and softly rounded edges, centred on the origin: w (x) × h (y) × d (z).
+// An optional hole turns it into a ring (the walls of the bottom case).
+function slab(w: number, h: number, d: number, r: number, bev = 0.01, hole?: [number, number, number]) {
+  bev = Math.min(bev, h / 2 - 0.0005);
+  const shape = rrect(new Shape(), w - 2 * bev, d - 2 * bev, r - bev);
+  if (hole) shape.holes.push(rrect(new Path(), hole[0] + 2 * bev, hole[1] + 2 * bev, hole[2] + bev));
+  const g = new ExtrudeGeometry(shape, { depth: h - 2 * bev, bevelEnabled: bev > 0, bevelThickness: bev, bevelSize: bev, bevelSegments: 4, curveSegments: 18 });
+  g.rotateX(-Math.PI / 2);
+  g.translate(0, -(h - 2 * bev) / 2, 0);
+  return g;
 }
 function mesh(geo: any, m: any, at: V3 = [0, 0, 0], shadow = true) {
   const x = new Mesh(geo, m);
@@ -106,8 +127,10 @@ function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => 
 
 /* ───────────── palette ───────────── */
 const INK = '#16151B';
-const ALU = () => mat('#8A8D96', { metal: 1, rough: 0.36, env: 1.0, roughMap: brushed(), aniso: 0.55 });
-const ALU_DECK = () => mat('#80838C', { metal: 1, rough: 0.4, env: 0.95, roughMap: brushed(), aniso: 0.55 });
+const ALU = () => mat('#86888E', { metal: 1, rough: 0.5, env: 0.68, roughMap: blasted() });
+const ALU_DECK = () => mat('#84868C', { metal: 1, rough: 0.56, env: 0.58, roughMap: blasted() });
+// the shell's heights: a thin base, the deck on top, keys almost flush, the hinge just above
+const CASE_R = 0.13, TUB_TOP = 0.135, DECK_Y = 0.1575, DECK_H = 0.045, KEY_Y = 0.1795, HINGE_Y = 0.222;
 const GOLD = () => mat('#D4AF5A', { metal: 1, rough: 0.25, env: 1 });
 const SILVER = () => mat('#D2D6DD', { metal: 1, rough: 0.22, env: 1.1 });
 const COPPER = () => mat('#C27C52', { metal: 1, rough: 0.3, env: 1 });
@@ -275,20 +298,20 @@ const KB_CELL = 128;
 function keyAtlases(keys: KeyDef[], aspect: (k: KeyDef) => number) {
   const rows = Math.ceil(keys.length / KB_COLS);
   const draw = (lit: boolean) => (g: CanvasRenderingContext2D) => {
-    g.fillStyle = lit ? '#000000' : '#1a1b21'; g.fillRect(0, 0, KB_COLS * KB_CELL, rows * KB_CELL);
+    g.fillStyle = lit ? '#000000' : '#0d0d10'; g.fillRect(0, 0, KB_COLS * KB_CELL, rows * KB_CELL);
     keys.forEach((k, i) => {
       const cx = (i % KB_COLS) * KB_CELL, cy = Math.floor(i / KB_COLS) * KB_CELL;
       if (k.hl && !lit) { g.fillStyle = '#F2B705'; g.fillRect(cx, cy, KB_CELL, KB_CELL); }
       if (!lit) { // a shallow dish: lighter centre, darker rim, like a sculpted keycap
         const dish = g.createRadialGradient(cx + KB_CELL / 2, cy + KB_CELL * 0.45, 4, cx + KB_CELL / 2, cy + KB_CELL / 2, KB_CELL * 0.72);
-        dish.addColorStop(0, 'rgba(255,255,255,.07)'); dish.addColorStop(0.7, 'rgba(0,0,0,0)'); dish.addColorStop(1, 'rgba(0,0,0,.35)');
+        dish.addColorStop(0, 'rgba(255,255,255,.035)'); dish.addColorStop(0.8, 'rgba(0,0,0,0)'); dish.addColorStop(1, 'rgba(0,0,0,.2)');
         g.fillStyle = dish; g.fillRect(cx, cy, KB_CELL, KB_CELL);
       }
       g.save();
       g.translate(cx + KB_CELL / 2, cy + KB_CELL / 2);
       g.scale(1 / aspect(k), 1); // the cell is stretched across wide keys; pre-squash so text reads normally
       const small = k.label.length > 2;
-      g.font = `${small ? 500 : 600} ${small ? 30 : k.row === 0 ? 34 : 50}px ${F_MONO}`;
+      g.font = `${small ? 500 : 500} ${small ? 28 : k.row === 0 ? 30 : 44}px -apple-system, "Helvetica Neue", "Instrument Sans Variable", Arial, sans-serif`;
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillStyle = lit ? (k.hl ? '#ffd24a' : '#ffffff') : k.hl ? '#16151B' : '#c9ccd6';
       g.fillText(k.label, 0, 2);
@@ -392,10 +415,10 @@ function studioEnvironment(renderer: WebGLRenderer) {
     m.position.set(...pos); m.lookAt(...look); env.add(m);
   };
   box(14, 6, [0, 12, 2], [0, 0, 0], 4.5);              // big top softbox
-  box(4, 12, [-12, 5, 4], [0, 0, 0], 2.2, '#dfe8ff');  // cool strip, left
+  box(4, 12, [-12, 5, 4], [0, 0, 0], 1.25, '#e6ecf7'); // cool strip, left
   box(4, 12, [12, 5, -2], [0, 0, 0], 1.8, '#fff1df');  // warm strip, right
   box(18, 1.2, [0, 3, -14], [0, 0, 0], 3.0);           // rim line behind
-  box(20, 7, [0, 1, 15], [0, 0, 0], 1.7);              // wide front fill (lights the front edges)
+  box(20, 7, [0, 1, 15], [0, 0, 0], 1.35);             // wide front fill (lights the front edges)
   box(30, 30, [0, -12, 0], [0, 0, 0], 0.55, '#f2efe9'); // pale floor bounce
   const pmrem = new PMREMGenerator(renderer);
   const tex = pmrem.fromScene(env, 0.02).texture;
@@ -434,7 +457,7 @@ export function createLaptop(o: Options): LaptopApi {
   key.shadow.bias = -0.0003;
   key.shadow.normalBias = 0.02;
   scene.add(key);
-  const rim = new DirectionalLight('#FFFFFF', 0.8); rim.position.set(-2, 5, -9); scene.add(rim);
+  const rim = new DirectionalLight('#FFFFFF', 0.3); rim.position.set(-1, 9, -9); scene.add(rim);
 
   /* ── soft contact shadows on the floor (depth rendered from below, then blurred) */
   const SW = 18, SH = 18, SDEPTH = 5;
@@ -513,23 +536,21 @@ export function createLaptop(o: Options): LaptopApi {
     return rigs[rigs.length - 1];
   };
 
-  // ── bottom case: an open aluminium tub (so installed parts are visible), hinge, ports, feet
+  // ── bottom case: a unibody tub (rounded corners, thin walls) so installed parts stay visible; ports and feet
   const baseRig = add(null, (g) => {
     const alu = ALU();
-    g.add(mesh(rb(3.2, 0.04, 2.2, 0.02, 4), alu, [0, 0.02, 0]));
-    g.add(mesh(rb(3.2, 0.17, 0.05, 0.02, 3), alu, [0, 0.085, 1.075]));
-    g.add(mesh(rb(3.2, 0.17, 0.05, 0.02, 3), alu, [0, 0.085, -1.075]));
-    g.add(mesh(rb(0.05, 0.17, 2.2, 0.02, 3), alu, [1.575, 0.085, 0]));
-    g.add(mesh(rb(0.05, 0.17, 2.2, 0.02, 3), alu, [-1.575, 0.085, 0]));
-    g.add(mesh(new BoxGeometry(3.08, 0.004, 2.08), mat('#2A2B31', { rough: 0.8 }), [0, 0.042, 0]));
-    const hinge = mesh(new CylinderGeometry(0.06, 0.06, 2.3, 24), BLACK(0.35), [0, 0.2, -1.08]); hinge.rotation.z = Math.PI / 2; g.add(hinge);
-    for (const x of [-1.2, 1.2]) { const cap = mesh(new CylinderGeometry(0.064, 0.064, 0.2, 32), mat('#C9CDD4', { metal: 1, rough: 0.15, env: 1.3 }), [x, 0.2, -1.08]); cap.rotation.z = Math.PI / 2; g.add(cap); }
-    const vent = BLACK(0.9);
-    for (let i = 0; i < 22; i++) g.add(mesh(new BoxGeometry(0.05, 0.05, 0.012), vent, [-0.86 + i * 0.082, 0.085, -1.1], false));
-    for (const z of [-0.45, -0.25]) g.add(mesh(rb(0.03, 0.04, 0.12, 0.015), BLACK(0.3), [-1.6, 0.09, z], false));
-    g.add(mesh(rb(0.03, 0.04, 0.12, 0.015), BLACK(0.3), [1.6, 0.09, -0.35], false));
-    const jack = mesh(new CylinderGeometry(0.02, 0.02, 0.03, 16), BLACK(0.3), [1.6, 0.09, -0.6], false); jack.rotation.z = Math.PI / 2; g.add(jack);
-    for (const [x, z] of [[-1.35, -0.85], [1.35, -0.85], [-1.35, 0.85], [1.35, 0.85]]) g.add(mesh(new CylinderGeometry(0.09, 0.09, 0.015, 24), BLACK(0.8), [x, -0.004, z]));
+    g.add(mesh(slab(3.2, 0.05, 2.2, CASE_R, 0.016), alu, [0, 0.025, 0]));
+    g.add(mesh(slab(3.201, TUB_TOP - 0.022, 2.201, CASE_R, 0.0015, [3.1, 2.1, CASE_R - 0.05]), alu, [0, 0.022 + (TUB_TOP - 0.022) / 2, 0]));
+    g.add(mesh(new BoxGeometry(3.06, 0.004, 2.06), mat('#2A2B31', { rough: 0.8 }), [0, 0.052, 0]));
+    // hinge: one long dark barrel across the back
+    const hinge = mesh(new CylinderGeometry(0.038, 0.038, 2.7, 32), mat('#2B2C31', { metal: 0.6, rough: 0.45, env: 0.8 }), [0, HINGE_Y - 0.03, -1.075]); hinge.rotation.z = Math.PI / 2; g.add(hinge);
+    // ports, sunk into the side walls: a magnetic charge port, two USB-C and a headphone jack on the left; HDMI, USB-C and a card slot on the right
+    const port = BLACK(0.35), py = 0.075;
+    const slot = (x: number, z: number, len: number, hgt = 0.026) => g.add(mesh(rb(0.02, hgt, len, Math.min(hgt, len) / 2 - 0.001, 3), port, [x, py, z], false));
+    slot(-1.596, -0.62, 0.13, 0.018); slot(-1.596, -0.38, 0.075); slot(-1.596, -0.24, 0.075);
+    const jack = mesh(new CylinderGeometry(0.014, 0.014, 0.02, 20), port, [-1.596, py, 0.55], false); jack.rotation.z = Math.PI / 2; g.add(jack);
+    slot(1.596, -0.55, 0.12, 0.03); slot(1.596, -0.32, 0.075); slot(1.596, 0.45, 0.2, 0.012);
+    for (const [x, z] of [[-1.3, -0.85], [1.3, -0.85], [-1.3, 0.85], [1.3, 0.85]]) g.add(mesh(new CylinderGeometry(0.1, 0.1, 0.012, 32), BLACK(0.85), [x, -0.004, z]));
   }, pose([0, 0, 0]), pose([0, -1.05, -0.25]), [0.25, 0.8]);
 
   // ── motherboard: sits in the tub (moves with the case)
@@ -570,7 +591,7 @@ export function createLaptop(o: Options): LaptopApi {
     for (let i = 0; i < 14; i++) fins.setMatrixAt(i, new Matrix4().makeTranslation(0.12 + i * 0.013, 0.1, 0));
     fins.castShadow = true; g.add(fins);
     g.add(flat(0.3, 0.06, mat('#ffffff', { map: partLabel('GPU', 'RENDERS IDEAS · 12GB', '#16151B', '#F4F1EA', 512, 100) }), [-0.12, 0.0855, 0.19]));
-  }, pose([0.35, 0.07, -0.45]), pose([0, 0.95, 2.0], [0.42, -0.1, 0], 2.05), [0.36, 0.9]);
+  }, pose([0.35, 0.035, -0.45]), pose([0, 0.95, 2.0], [0.42, -0.1, 0], 2.05), [0.36, 0.9]);
 
   // ── RAM: two SO-DIMMs with heat spreaders and labels
   add('ram', (g) => {
@@ -623,7 +644,7 @@ export function createLaptop(o: Options): LaptopApi {
 
   // ── keyboard layout, worked out first: the deck's underglow needs to know where every key sits
   const layout = keyboardLayout();
-  const U = 0.1945, GAP = 0.022, X0 = -1.41;
+  const U = 0.1945, GAP = 0.032, X0 = -1.41;
   const rowZ = [-0.935, -0.77, -0.58, -0.39, -0.2, -0.01];
   const keySize = (k: KeyDef) => ({ w: k.w * U - GAP, d: k.row === 0 ? 0.1 : k.half ? 0.078 : 0.168 });
   const keyZ = (k: KeyDef) => rowZ[k.row] + (k.half === 'up' ? -0.043 : k.half === 'down' ? 0.043 : 0);
@@ -655,38 +676,32 @@ export function createLaptop(o: Options): LaptopApi {
       void main() {
         float m = texture2D(uMask, vUv).r;
         float on = smoothstep(vUv.x - 0.12, vUv.x, uSweep);
-        gl_FragColor = vec4(pal(vUv.x * 0.55 + uTime * 0.035) * m * uPower * on * 1.5, 1.0);
+        gl_FragColor = vec4(pal(vUv.x * 0.55 + uTime * 0.035) * m * uPower * on * 0.85, 1.0);
       }`,
     transparent: true, blending: AdditiveBlending, depthWrite: false, toneMapped: false,
   }));
   glowPlane.rotation.x = -Math.PI / 2;
-  glowPlane.position.set(0, 0.0292, GZ);
+  glowPlane.position.set(0, DECK_H / 2 + 0.0034, GZ);
 
-  // ── keyboard deck (top case): brushed aluminium, a polished diamond-cut edge, speaker grilles
+  // ── keyboard deck (top case): one bead-blasted slab with rounded corners, a black keyboard well,
+  //    speaker grilles either side, the trackpad recess and the thumb scoop on the front edge
   const deckGrille = grilleTexture('rgba(12,12,16,.85)');
-  const polished = () => mat('#DADDE3', { metal: 1, rough: 0.06, env: 1.4 });
   const deckRig = add('keyboard', (g) => {
-    g.add(mesh(rb(3.2, 0.05, 2.2, 0.05, 5), ALU_DECK(), [0, 0, 0]));
-    // diamond-cut chamfer: a bright sliver running round the top edge
-    const pe = polished();
-    g.add(mesh(new BoxGeometry(3.1, 0.004, 0.012), pe, [0, 0.0255, 1.094], false));
-    g.add(mesh(new BoxGeometry(3.1, 0.004, 0.012), pe, [0, 0.0255, -1.094], false));
-    g.add(mesh(new BoxGeometry(0.012, 0.004, 2.1), pe, [1.594, 0.0255, 0], false));
-    g.add(mesh(new BoxGeometry(0.012, 0.004, 2.1), pe, [-1.594, 0.0255, 0], false));
-    // keyboard well and the backlight underglow sitting in it
-    g.add(mesh(rb(2.92, 0.02, 1.13, 0.015), BLACK(0.85), [0, 0.018, -0.455]));
+    // the slab reaches down inside the case walls, so only its rounded top edge shows: one seamless side
+    g.add(mesh(slab(3.198, DECK_H + 0.03, 2.198, CASE_R, 0.012), ALU_DECK(), [0, -0.015, 0]));
+    // the well rises a hair above the deck, so the keys look set into it
+    g.add(mesh(rb(2.92, 0.01, 1.13, 0.012), mat('#0b0b0d', { rough: 0.75, env: 0.3 }), [0, DECK_H / 2 - 0.002, -0.455]));
     g.add(glowPlane);
-    for (const x of [-1.52, 1.52]) g.add(flat(0.12, 1.0, mat('#ffffff', { map: deckGrille, transparent: true }), [x, 0.0262, -0.46]));
-    // trackpad cut-out lip and a tiny status light on the front edge
-    g.add(mesh(rb(1.13, 0.004, 0.69, 0.05), pe, [0, 0.0255, 0.62], false));
-    const led = new Mesh(new BoxGeometry(0.05, 0.008, 0.006), new MeshBasicMaterial({ color: '#7fe7ff', toneMapped: false }));
-    led.position.set(0, 0.005, 1.103); g.add(led);
-  }, pose([0, 0.195, 0]), pose([0, 1.95, -0.65], [0.24, 0, 0], 0.95), [0.15, 0.72], [0.75, 0, 0]);
+    for (const x of [-1.52, 1.52]) g.add(flat(0.12, 1.0, mat('#ffffff', { map: deckGrille, transparent: true }), [x, DECK_H / 2 + 0.0004, -0.46]));
+    // a dark hairline round the trackpad, and the scoop you lift the lid with
+    g.add(mesh(rb(1.41, 0.002, 0.87, 0.06), mat('#3a3b40', { rough: 0.6 }), [0, DECK_H / 2, 0.6], false));
+    g.add(mesh(rb(0.42, 0.012, 0.05, 0.006), mat('#6b6d73', { metal: 1, rough: 0.5, env: 0.8 }), [0, DECK_H / 2 - 0.004, 1.088], false));
+  }, pose([0, DECK_Y, 0]), pose([0, 1.95, -0.65], [0.24, 0, 0], 0.95), [0.15, 0.72], [0.75, 0, 0]);
 
   // ── keys: a real layout, sculpted caps, backlit legends
   const atlases = keyAtlases(layout, (k) => { const s = keySize(k); return s.w / s.d; });
   for (const t of [atlases.map, atlases.glow]) t.wrapS = t.wrapT = RepeatWrapping;
-  const keySide = mat('#15161b', { rough: 0.62, env: 0.3 });
+  const keySide = mat('#0c0c0f', { rough: 0.7, env: 0.25 });
   const keys: Mesh[] = [];
   const keyTops: MeshPhysicalMaterial[] = [];
   const keyHome: Vector3[] = [], keyFly: Vector3[] = [], keySpin: Euler[] = [], keyCol: number[] = [], keyRow: number[] = [];
@@ -694,16 +709,16 @@ export function createLaptop(o: Options): LaptopApi {
   layout.forEach((k, i) => {
     const s = keySize(k);
     const gk = `${s.w.toFixed(3)}x${s.d.toFixed(3)}`;
-    if (!geoCache.has(gk)) geoCache.set(gk, rb(s.w, 0.042, s.d, 0.016, 3));
+    if (!geoCache.has(gk)) geoCache.set(gk, rb(s.w, 0.022, s.d, 0.009, 3));
     const cell = (t: Texture) => { const c = t.clone(); c.repeat.set(1 / KB_COLS, 1 / atlases.rows); c.offset.set((i % KB_COLS) / KB_COLS, 1 - (Math.floor(i / KB_COLS) + 1) / atlases.rows); return c; };
-    const top = mat('#ffffff', { map: cell(atlases.map), rough: 0.7, env: 0.22 });
+    const top = mat('#ffffff', { map: cell(atlases.map), rough: 0.62, env: 0.25 });
     top.emissiveMap = cell(atlases.glow);
     top.emissive = new Color(k.hl ? '#ffc43a' : '#cfeaff');
     top.emissiveIntensity = 0;
     const m = new Mesh(geoCache.get(gk)!, [keySide, keySide, top, keySide, keySide, keySide]);
     m.castShadow = true; m.receiveShadow = true; m.userData.part = 'keyboard';
     scene.add(m); keys.push(m); keyTops.push(top);
-    keyHome.push(new Vector3(X0 + k.x * U, 0.244, keyZ(k)));
+    keyHome.push(new Vector3(X0 + k.x * U, KEY_Y, keyZ(k)));
     keyCol.push(k.x / 14.5); keyRow.push(k.row);
     // torn down: the keys lift off as one floating sheet, rows fanning back a little
     keyFly.push(new Vector3(0, 0.42 + k.row * 0.035, -0.06 * k.row));
@@ -712,8 +727,8 @@ export function createLaptop(o: Options): LaptopApi {
 
   // ── trackpad: glass with a polished rim
   add('trackpad', (g) => {
-    g.add(mesh(rb(1.08, 0.02, 0.64, 0.05), mat('#2E3038', { rough: 0.16, metal: 0.25, env: 1.1, coat: 1, coatRough: 0.04 }), [0, 0, 0]));
-  }, pose([0, 0.225, 0.62]), pose([0, 1.75, 0.55], [0.38, 0, 0], 1.15), [0.2, 0.78], [0.9, 0, 0]);
+    g.add(mesh(rb(1.38, 0.01, 0.84, 0.055, 4), mat('#72757B', { rough: 0.42, metal: 0.6, env: 0.55, coat: 0.15, coatRough: 0.3 }), [0, 0, 0]));
+  }, pose([0, DECK_Y + DECK_H / 2 + 0.0035, 0.6]), pose([0, 1.75, 0.55], [0.38, 0, 0], 1.15), [0.2, 0.78], [0.9, 0, 0]);
 
   // ── lid: aluminium outer shell, a backlit logo, stickers. Pivot on the hinge.
   const stickerSpots: [number, number, number, number][] = [
@@ -725,26 +740,26 @@ export function createLaptop(o: Options): LaptopApi {
     g.fillStyle = '#ffffff'; g.font = `800 120px ${F_DISP}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('HU', 128, 136);
   }), transparent: true, toneMapped: false, color: new Color(0, 0, 0) });
   const lidRig = add(null, (g) => {
-    g.add(mesh(rb(3.2, 0.05, 2.15, 0.05, 5), ALU(), [0, 0.03, 1.075]));
-    g.add(mesh(new CylinderGeometry(0.17, 0.17, 0.004, 64), mat('#B4B7BF', { metal: 1, rough: 0.1, env: 1.3 }), [0, 0.056, 0.95]));
-    g.add(flat(0.3, 0.3, logoMat, [0, 0.0585, 0.95]));
+    g.add(mesh(slab(3.2, 0.036, 2.15, CASE_R, 0.012), ALU(), [0, 0.026, 1.075]));
+    g.add(mesh(new CylinderGeometry(0.17, 0.17, 0.002, 64), mat('#C4C7CE', { metal: 1, rough: 0.06, env: 1.4 }), [0, 0.0445, 0.95]));
+    g.add(flat(0.3, 0.3, logoMat, [0, 0.0462, 0.95]));
     o.stickers.slice(0, stickerSpots.length).forEach((s, i) => {
       const [x, z, size, tilt] = stickerSpots[i];
-      const m = flat(size, size, mat('#ffffff', { map: stickerTexture(s, i), transparent: true, rough: 0.45, coat: 0.4 }), [x, 0.0595 + i * 0.0003, z], tilt);
+      const m = flat(size, size, mat('#ffffff', { map: stickerTexture(s, i), transparent: true, rough: 0.45, coat: 0.4 }), [x, 0.047 + i * 0.0003, z], tilt);
       m.userData.sticker = s.id;
       g.add(m);
     });
-  }, (lid) => pose([0, 0.225, -1.1], [OPEN * lid, 0, 0]), pose([-3.0, 2.15, -2.6], [-1.72, Math.PI, 0], 0.74), [0.14, 0.72]);
+  }, (lid) => pose([0, HINGE_Y, -1.1], [OPEN * lid, 0, 0]), pose([-3.0, 2.15, -2.6], [-1.72, Math.PI, 0], 0.74), [0.14, 0.72]);
   lidRig.order = 'YXZ';
   lidRig.arc.set(-0.6, 0.35, -1.3); // the lid swings back and left, away from the screen
 
   // ── screen: thin glossy bezel, camera notch, a live display under glass, and light that spills onto the keys
   const screen = makeScreen();
   const dispMat = new MeshBasicMaterial({ map: screen.tex, toneMapped: false, color: new Color(0, 0, 0) });
-  const spill = new PointLight('#9cc4ff', 0, 3.2, 1.6);
+  const spill = new PointLight('#c4d6f2', 0, 2.6, 2);
   const screenRig = add('screen', (g) => {
-    g.add(mesh(rb(3.14, 0.022, 2.09, 0.05), mat('#08080a', { rough: 0.12, metal: 0.1, env: 0.9, coat: 1, coatRough: 0.03 }), [0, -0.018, 1.075]));
-    const disp = new Mesh(new PlaneGeometry(3.04, 1.95), dispMat);
+    g.add(mesh(slab(3.16, 0.02, 2.1, CASE_R - 0.012, 0.006), mat('#060607', { rough: 0.12, metal: 0.1, env: 0.9, coat: 1, coatRough: 0.03 }), [0, -0.017, 1.075]));
+    const disp = new Mesh(new PlaneGeometry(3.06, 1.97), dispMat);
     disp.rotation.x = Math.PI / 2;
     disp.position.set(0, -0.0302, 1.065);
     g.add(disp);
@@ -755,7 +770,7 @@ export function createLaptop(o: Options): LaptopApi {
     g.add(mesh(new CylinderGeometry(0.014, 0.014, 0.004, 24), mat('#16233a', { rough: 0.05, env: 1.5, coat: 1 }), [0, -0.034, 2.065], false));
     spill.position.set(0, -0.6, 0.9);
     g.add(spill);
-  }, (lid) => pose([0, 0.225, -1.1], [OPEN * lid, 0, 0]), pose([3.0, 2.25, -2.1], [-1.72, 0, 0], 0.84), [0.0, 0.55], [-1.72, 0, 0]);
+  }, (lid) => pose([0, HINGE_Y, -1.1], [OPEN * lid, 0, 0]), pose([3.0, 2.25, -2.1], [-1.72, 0, 0], 0.84), [0.0, 0.55], [-1.72, 0, 0]);
   screenRig.arc.set(0.6, 0.45, 1.2); // the screen comes forward and right first, clear of the lid
 
   /* ───────────── state ───────────── */
@@ -845,7 +860,7 @@ export function createLaptop(o: Options): LaptopApi {
       // columns peel off left to right, then the whole sheet of keys ripples
       const tk = ease(clamp01((p - 0.1 - keyCol[k] * 0.22) / 0.42)) * looseDeck;
       const wave = Math.sin(time * 1.9 - keyCol[k] * 7 - keyRow[k] * 0.7);
-      v.copy(keyHome[k]).sub(vv.set(0, 0.195, 0)).applyMatrix4(deck.matrixWorld);
+      v.copy(keyHome[k]).sub(vv.set(0, DECK_Y, 0)).applyMatrix4(deck.matrixWorld);
       v.addScaledVector(keyFly[k], tk);
       v.y += hoverLift * 0.6 + wave * 0.045 * floatAmt * looseDeck;
       qA.setFromEuler(e1.set(keySpin[k].x * tk + Math.cos(time * 1.9 - keyCol[k] * 7 - keyRow[k] * 0.7) * 0.14 * floatAmt * looseDeck, 0, 0, 'XYZ')).premultiply(deck.quaternion);
@@ -1004,7 +1019,7 @@ export function createLaptop(o: Options): LaptopApi {
     const sweep = clamp01((uiAge - 0.05) / 0.9) * 1.15;
     dispMat.color.setScalar(power);
     logoMat.color.setScalar(power * 0.9);
-    spill.intensity = power * 1.4;
+    spill.intensity = power * 0.4;
     const lifted = ease(clamp01((prog - 0.1) / 0.6)) * (1 - clamp01(deckRig.inst)) * (1 - clamp01(deckRig.show));
     glowUniforms.uPower.value = power * (1 - 0.85 * lifted);
     glowUniforms.uSweep.value = sweep;

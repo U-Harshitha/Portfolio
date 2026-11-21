@@ -2,6 +2,10 @@
 
 Decisions and why. Newest version first.
 
+## v2.6: a MacBook-style body
+
+Still built in code (so it can still come apart), reshaped to read as a modern unibody notebook: extruded slabs with rounded plan corners (`slab()` in laptop.ts) instead of square boxes; a thinner base whose side is one smooth wall; near-flush black keys sitting in a recessed black well with wider gaps and clean sans legends; a large trackpad in the shell colour, flush with a hairline gap; speaker grilles either side of the keys; a thumb scoop on the front edge; one long dark hinge barrel; slim ports in the side walls. The shell is space grey and bead-blasted (a fine even grain) instead of brushed. No maker logo: the lid keeps the HU mark. The screen spill and the back rim light were turned down so the deck reads as one even tone.
+
 ## v2.5: every panel final, a quieter finish
 
 **Locked in**: Screen = profile card (portrait/monogram + facts) then a short chat, "whoami"; CPU = git log + dependencies + tags, "Work experience"; Speakers = reels, "Dance"; Trackpad = command bar, "Ping me". The panel pickers, "copy my picks" and every unused design (letter, boot log, profile, timeline, datasheet, count sheet, now playing) are gone.
