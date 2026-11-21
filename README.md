@@ -114,6 +114,13 @@ After that, every `git push` redeploys the site automatically.
 Link to it with a plain `<a href="/hangman">`. If the Render service URL ever changes, update both
 `destination` hosts in `vercel.json`.
 
+### Open Research Nexus at /research
+`/research` is proxied the same way (see `rewrites` in `vercel.json`) to the static site from
+[U-Harshitha/Open-Research-Platform](https://github.com/U-Harshitha/Open-Research-Platform), hosted on Render
+(its `render.yaml` Blueprint also runs the Flask AI API). The app is built to live under `/research`, so its
+links and assets work through the proxy. If the Render static site URL ever changes, update both
+`destination` hosts in `vercel.json`. It is linked from the projects room via `content/projects/open-research-nexus.md`.
+
 **Resume**: `public/resume.pdf` is kept out of git because your current resume shows your phone number. Resume buttons hide themselves when the file isn't there. To publish one: save a version without the phone number as `public/resume.pdf`, delete the last two lines of `.gitignore`, then `git add public/resume.pdf .gitignore && git commit -m "Add resume" && git push`.
 
 ## Where things are
