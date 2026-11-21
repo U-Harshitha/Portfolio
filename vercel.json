@@ -5,7 +5,9 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/hangman", "destination": "https://hangman-in-phoenix.onrender.com/hangman" },
-    { "source": "/hangman/:path*", "destination": "https://hangman-in-phoenix.onrender.com/hangman/:path*" }
+    { "source": "/hangman/:path*", "destination": "https://hangman-in-phoenix.onrender.com/hangman/:path*" },
+    { "source": "/research", "destination": "https://open-research-nexus.onrender.com/research/" },
+    { "source": "/research/:path*", "destination": "https://open-research-nexus.onrender.com/research/:path*" }
   ],
   "headers": [
     {
